@@ -11,12 +11,11 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun BrutalistButton(
+fun MetroButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -27,20 +26,24 @@ fun BrutalistButton(
         Button(
             onClick = onClick,
             modifier = modifier
-                .height(56.dp)
+                .height(48.dp)
                 .fillMaxWidth(),
             enabled = enabled,
             shape = RectangleShape,
             colors = ButtonDefaults.buttonColors(
-                containerColor = Color.Black,
-                contentColor = Color.White,
-                disabledContainerColor = Color.Gray,
-                disabledContentColor = Color.White
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+                disabledContainerColor = MaterialTheme.colorScheme.outline,
+                disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
             ),
-            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 16.dp)
+            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
+            elevation = ButtonDefaults.buttonElevation(
+                defaultElevation = 0.dp,
+                pressedElevation = 0.dp
+            )
         ) {
             Text(
-                text = text.uppercase(),
+                text = text.lowercase(),
                 style = MaterialTheme.typography.labelLarge
             )
         }
@@ -48,21 +51,34 @@ fun BrutalistButton(
         OutlinedButton(
             onClick = onClick,
             modifier = modifier
-                .height(56.dp)
+                .height(48.dp)
                 .fillMaxWidth(),
             enabled = enabled,
             shape = RectangleShape,
             colors = ButtonDefaults.outlinedButtonColors(
-                contentColor = Color.Black,
-                disabledContentColor = Color.Gray
+                contentColor = MaterialTheme.colorScheme.primary,
+                disabledContentColor = MaterialTheme.colorScheme.outline
             ),
-            border = BorderStroke(2.dp, if (enabled) Color.Black else Color.Gray),
-            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 16.dp)
+            border = BorderStroke(
+                1.dp,
+                if (enabled) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.outlineVariant
+            ),
+            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
         ) {
             Text(
-                text = text.uppercase(),
+                text = text.lowercase(),
                 style = MaterialTheme.typography.labelLarge
             )
         }
     }
 }
+
+// Alias for backward compatibility
+@Composable
+fun BrutalistButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    filled: Boolean = true
+) = MetroButton(text, onClick, modifier, enabled, filled)

@@ -14,9 +14,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -42,19 +39,17 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
-import java.time.format.TextStyle
 import java.time.temporal.TemporalAdjusters
 import java.util.Calendar
-import java.util.Locale
 
 data class DateOption(
     val label: String,
-    val dates: List<LocalDate> // Can be single date or range (weekend = Sat + Sun)
+    val dates: List<LocalDate>
 )
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
-fun BrutalistDateTimePicker(
+fun MetroDateTimePicker(
     selectedDate: LocalDate,
     selectedTime: LocalTime,
     onDateTimeSelected: (LocalDate, LocalTime) -> Unit,
@@ -64,7 +59,6 @@ fun BrutalistDateTimePicker(
     var showTimePicker by remember { mutableStateOf(false) }
     val timeFormatter = remember { DateTimeFormatter.ofPattern("h:mm a") }
 
-    // Get current device date/time
     fun getDeviceDate(): LocalDate {
         val calendar = Calendar.getInstance()
         return LocalDate.of(
@@ -86,64 +80,58 @@ fun BrutalistDateTimePicker(
         val today = getDeviceDate()
         val tomorrow = today.plusDays(1)
         return when (date) {
-            today -> "Today"
-            tomorrow -> "Tomorrow"
-            else -> date.format(DateTimeFormatter.ofPattern("EEE, MMM d"))
+            today -> "today"
+            tomorrow -> "tomorrow"
+            else -> date.format(DateTimeFormatter.ofPattern("EEE, MMM d")).lowercase()
         }
     }
 
     Column(modifier = modifier.fillMaxWidth()) {
-        // Check if time is in the past for today
         val deviceDate = getDeviceDate()
         val deviceTime = getDeviceTime()
         val isTimeInPast = selectedDate == deviceDate && selectedTime.isBefore(deviceTime)
 
-        // DATE SECTION
         Text(
-            text = "DATE",
+            text = "date",
             style = MaterialTheme.typography.labelMedium,
-            color = Color.Black,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(bottom = 8.dp)
         )
 
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .border(2.dp, Color.Black)
+                .border(1.dp, MaterialTheme.colorScheme.outline)
                 .clickable { showDatePicker = true }
                 .padding(16.dp)
         ) {
             Text(
                 text = formatDateLabel(selectedDate),
                 style = MaterialTheme.typography.bodyLarge,
-                color = Color.Black
+                color = MaterialTheme.colorScheme.onSurface
             )
         }
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // TIME SECTION
         Text(
-            text = "TIME",
+            text = "time",
             style = MaterialTheme.typography.labelMedium,
-            color = Color.Black,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(bottom = 8.dp)
         )
 
-        // Time quick selection chips
         data class TimeOption(val label: String, val minutesFromNow: Int)
         val timeOptions = listOf(
-            TimeOption("In 10 min", 10),
-            TimeOption("In 30 min", 30),
-            TimeOption("In 1 hr", 60),
-            TimeOption("In 2 hrs", 120)
+            TimeOption("in 10 min", 10),
+            TimeOption("in 30 min", 30),
+            TimeOption("in 1 hr", 60),
+            TimeOption("in 2 hrs", 120)
         )
 
-        // Check if selected time matches any quick option (only valid for today)
         fun isQuickTimeOption(option: TimeOption): Boolean {
             if (selectedDate != deviceDate) return false
             val optionTime = deviceTime.plusMinutes(option.minutesFromNow.toLong())
-            // Allow 1 minute tolerance for matching
             return selectedTime.hour == optionTime.hour &&
                    kotlin.math.abs(selectedTime.minute - optionTime.minute) <= 1
         }
@@ -159,18 +147,14 @@ fun BrutalistDateTimePicker(
                 val isSelected = isQuickTimeOption(option)
                 Box(
                     modifier = Modifier
-                        .border(2.dp, Color.Black)
-                        .background(if (isSelected) Color.Black else Color.White)
+                        .border(1.dp, MaterialTheme.colorScheme.outline)
+                        .background(if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent)
                         .clickable {
-                            // Calculate new time and potentially new date
                             var newTime = deviceTime.plusMinutes(option.minutesFromNow.toLong())
                             var newDate = deviceDate
-
-                            // Handle day overflow (e.g., 11:30 PM + 1 hr = 12:30 AM next day)
                             if (newTime.isBefore(deviceTime)) {
                                 newDate = deviceDate.plusDays(1)
                             }
-
                             onDateTimeSelected(newDate, newTime)
                         }
                         .padding(horizontal = 12.dp, vertical = 10.dp)
@@ -178,48 +162,44 @@ fun BrutalistDateTimePicker(
                     Text(
                         text = option.label,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = if (isSelected) Color.White else Color.Black
+                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
                     )
                 }
             }
 
-            // Custom time option
             Box(
                 modifier = Modifier
-                    .border(2.dp, if (isTimeInPast && isCustomTime) Color.Red else Color.Black)
-                    .background(if (isCustomTime) Color.Black else Color.White)
+                    .border(1.dp, if (isTimeInPast && isCustomTime) Color(0xFFE53935) else MaterialTheme.colorScheme.outline)
+                    .background(if (isCustomTime) MaterialTheme.colorScheme.primary else Color.Transparent)
                     .clickable { showTimePicker = true }
                     .padding(horizontal = 12.dp, vertical = 10.dp)
             ) {
                 Text(
-                    text = if (isCustomTime) selectedTime.format(timeFormatter) else "Other",
+                    text = if (isCustomTime) selectedTime.format(timeFormatter).lowercase() else "other",
                     style = MaterialTheme.typography.bodyMedium,
                     color = when {
-                        isTimeInPast && isCustomTime -> Color.Red
-                        isCustomTime -> Color.White
-                        else -> Color.Black
+                        isTimeInPast && isCustomTime -> Color(0xFFE53935)
+                        isCustomTime -> MaterialTheme.colorScheme.onPrimary
+                        else -> MaterialTheme.colorScheme.onSurface
                     }
                 )
             }
         }
 
-        // Warning message when time is in the past
         if (isTimeInPast) {
             Text(
-                text = "This time has passed. Please select a future time.",
+                text = "this time has passed. please select a future time.",
                 style = MaterialTheme.typography.bodySmall,
-                color = Color.Red,
+                color = Color(0xFFE53935),
                 modifier = Modifier.padding(top = 8.dp)
             )
         }
     }
 
-    // DATE PICKER DIALOG
     if (showDatePicker) {
         val deviceDate = getDeviceDate()
         var tempSelectedDate by remember { mutableStateOf(selectedDate) }
 
-        // Calculate date options
         val dateOptions = remember(deviceDate) {
             val today = deviceDate
             val tomorrow = today.plusDays(1)
@@ -229,16 +209,15 @@ fun BrutalistDateTimePicker(
             val nextSunday = nextSaturday.plusDays(1)
 
             buildList {
-                add(DateOption("Today", listOf(today)))
-                add(DateOption("Tomorrow", listOf(tomorrow)))
+                add(DateOption("today", listOf(today)))
+                add(DateOption("tomorrow", listOf(tomorrow)))
                 if (thisSaturday.isAfter(tomorrow)) {
-                    add(DateOption("This weekend", listOf(thisSaturday, thisSunday)))
+                    add(DateOption("this weekend", listOf(thisSaturday, thisSunday)))
                 }
-                add(DateOption("Next weekend", listOf(nextSaturday, nextSunday)))
+                add(DateOption("next weekend", listOf(nextSaturday, nextSunday)))
             }
         }
 
-        // Find which option is currently selected
         val selectedOption = dateOptions.find { option ->
             option.dates.contains(tempSelectedDate)
         }
@@ -251,8 +230,8 @@ fun BrutalistDateTimePicker(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp)
-                    .background(Color.White)
-                    .border(2.dp, Color.Black)
+                    .background(MaterialTheme.colorScheme.surface)
+                    .border(1.dp, MaterialTheme.colorScheme.outline)
             ) {
                 Column(
                     modifier = Modifier
@@ -261,14 +240,13 @@ fun BrutalistDateTimePicker(
                         .verticalScroll(rememberScrollState())
                 ) {
                     Text(
-                        text = "SELECT DATE",
+                        text = "select date",
                         style = MaterialTheme.typography.titleLarge,
-                        color = Color.Black
+                        color = MaterialTheme.colorScheme.onSurface
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Quick selection chips
                     FlowRow(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -278,10 +256,9 @@ fun BrutalistDateTimePicker(
                             val isSelected = selectedOption == option
                             Box(
                                 modifier = Modifier
-                                    .border(2.dp, Color.Black)
-                                    .background(if (isSelected) Color.Black else Color.White)
+                                    .border(1.dp, MaterialTheme.colorScheme.outline)
+                                    .background(if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent)
                                     .clickable {
-                                        // Select first date of the option (or Saturday for weekends)
                                         tempSelectedDate = option.dates.first()
                                     }
                                     .padding(horizontal = 16.dp, vertical = 10.dp)
@@ -289,7 +266,7 @@ fun BrutalistDateTimePicker(
                                 Text(
                                     text = option.label,
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = if (isSelected) Color.White else Color.Black
+                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
                                 )
                             }
                         }
@@ -297,8 +274,7 @@ fun BrutalistDateTimePicker(
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // Calendar
-                    CalendarView(
+                    MetroCalendarView(
                         selectedDate = tempSelectedDate,
                         highlightedDates = selectedOption?.dates ?: listOf(tempSelectedDate),
                         minDate = deviceDate,
@@ -309,14 +285,12 @@ fun BrutalistDateTimePicker(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Done button
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(Color.Black)
+                            .background(MaterialTheme.colorScheme.primary)
                             .clickable {
                                 val deviceTime = getDeviceTime()
-                                // If selecting today and time is in past, adjust
                                 val newTime = if (tempSelectedDate == deviceDate && selectedTime.isBefore(deviceTime)) {
                                     deviceTime.plusHours(1).withMinute(0)
                                 } else {
@@ -329,9 +303,9 @@ fun BrutalistDateTimePicker(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "DONE",
+                            text = "done",
                             style = MaterialTheme.typography.labelLarge,
-                            color = Color.White
+                            color = MaterialTheme.colorScheme.onPrimary
                         )
                     }
                 }
@@ -339,7 +313,6 @@ fun BrutalistDateTimePicker(
         }
     }
 
-    // TIME PICKER DIALOG
     if (showTimePicker) {
         val deviceDate = getDeviceDate()
         val deviceTime = getDeviceTime()
@@ -358,8 +331,8 @@ fun BrutalistDateTimePicker(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp)
-                    .background(Color.White)
-                    .border(2.dp, Color.Black)
+                    .background(MaterialTheme.colorScheme.surface)
+                    .border(1.dp, MaterialTheme.colorScheme.outline)
             ) {
                 Column(
                     modifier = Modifier
@@ -368,16 +341,16 @@ fun BrutalistDateTimePicker(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = "SELECT TIME",
+                        text = "select time",
                         style = MaterialTheme.typography.titleLarge,
-                        color = Color.Black
+                        color = MaterialTheme.colorScheme.onSurface
                     )
 
                     if (selectedDate == deviceDate) {
                         Text(
-                            text = "Must be after ${deviceTime.format(timeFormatter)}",
+                            text = "must be after ${deviceTime.format(timeFormatter).lowercase()}",
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color.Gray,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(top = 4.dp)
                         )
                     }
@@ -387,20 +360,20 @@ fun BrutalistDateTimePicker(
                     TimePicker(
                         state = timePickerState,
                         colors = TimePickerDefaults.colors(
-                            clockDialColor = Color.LightGray.copy(alpha = 0.3f),
-                            clockDialSelectedContentColor = Color.White,
-                            clockDialUnselectedContentColor = Color.Black,
-                            selectorColor = Color.Black,
-                            containerColor = Color.White,
-                            periodSelectorBorderColor = Color.Black,
-                            periodSelectorSelectedContainerColor = Color.Black,
-                            periodSelectorSelectedContentColor = Color.White,
-                            periodSelectorUnselectedContainerColor = Color.White,
-                            periodSelectorUnselectedContentColor = Color.Black,
-                            timeSelectorSelectedContainerColor = Color.Black,
-                            timeSelectorSelectedContentColor = Color.White,
-                            timeSelectorUnselectedContainerColor = Color.White,
-                            timeSelectorUnselectedContentColor = Color.Black
+                            clockDialColor = MaterialTheme.colorScheme.surfaceVariant,
+                            clockDialSelectedContentColor = MaterialTheme.colorScheme.onPrimary,
+                            clockDialUnselectedContentColor = MaterialTheme.colorScheme.onSurface,
+                            selectorColor = MaterialTheme.colorScheme.primary,
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            periodSelectorBorderColor = MaterialTheme.colorScheme.outline,
+                            periodSelectorSelectedContainerColor = MaterialTheme.colorScheme.primary,
+                            periodSelectorSelectedContentColor = MaterialTheme.colorScheme.onPrimary,
+                            periodSelectorUnselectedContainerColor = MaterialTheme.colorScheme.surface,
+                            periodSelectorUnselectedContentColor = MaterialTheme.colorScheme.onSurface,
+                            timeSelectorSelectedContainerColor = MaterialTheme.colorScheme.primary,
+                            timeSelectorSelectedContentColor = MaterialTheme.colorScheme.onPrimary,
+                            timeSelectorUnselectedContainerColor = MaterialTheme.colorScheme.surface,
+                            timeSelectorUnselectedContentColor = MaterialTheme.colorScheme.onSurface
                         )
                     )
 
@@ -408,7 +381,7 @@ fun BrutalistDateTimePicker(
                         Text(
                             text = errorMessage!!,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Color.Red,
+                            color = Color(0xFFE53935),
                             modifier = Modifier.padding(top = 8.dp)
                         )
                     }
@@ -422,28 +395,28 @@ fun BrutalistDateTimePicker(
                         Box(
                             modifier = Modifier
                                 .weight(1f)
-                                .border(2.dp, Color.Black)
+                                .border(1.dp, MaterialTheme.colorScheme.outline)
                                 .clickable { showTimePicker = false }
                                 .padding(16.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "CANCEL",
+                                text = "cancel",
                                 style = MaterialTheme.typography.labelLarge,
-                                color = Color.Black
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                         }
                         Box(
                             modifier = Modifier
                                 .weight(1f)
-                                .background(Color.Black)
+                                .background(MaterialTheme.colorScheme.primary)
                                 .clickable {
                                     val newTime = LocalTime.of(timePickerState.hour, timePickerState.minute)
                                     val freshDeviceDate = getDeviceDate()
                                     val freshDeviceTime = getDeviceTime()
 
                                     if (selectedDate == freshDeviceDate && !newTime.isAfter(freshDeviceTime)) {
-                                        errorMessage = "Select a future time"
+                                        errorMessage = "select a future time"
                                     } else {
                                         onDateTimeSelected(selectedDate, newTime)
                                         showTimePicker = false
@@ -453,9 +426,9 @@ fun BrutalistDateTimePicker(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "DONE",
+                                text = "done",
                                 style = MaterialTheme.typography.labelLarge,
-                                color = Color.White
+                                color = MaterialTheme.colorScheme.onPrimary
                             )
                         }
                     }
@@ -466,17 +439,16 @@ fun BrutalistDateTimePicker(
 }
 
 @Composable
-private fun CalendarView(
+private fun MetroCalendarView(
     selectedDate: LocalDate,
     highlightedDates: List<LocalDate>,
     minDate: LocalDate,
     onDateSelected: (LocalDate) -> Unit
 ) {
     val currentMonth = remember { mutableStateOf(YearMonth.from(selectedDate)) }
-    val daysOfWeek = listOf("S", "M", "T", "W", "T", "F", "S")
+    val daysOfWeek = listOf("s", "m", "t", "w", "t", "f", "s")
 
     Column(modifier = Modifier.fillMaxWidth()) {
-        // Month navigation
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -484,7 +456,7 @@ private fun CalendarView(
         ) {
             Box(
                 modifier = Modifier
-                    .border(2.dp, Color.Black)
+                    .border(1.dp, MaterialTheme.colorScheme.outline)
                     .clickable {
                         val newMonth = currentMonth.value.minusMonths(1)
                         if (!newMonth.isBefore(YearMonth.from(minDate))) {
@@ -497,14 +469,14 @@ private fun CalendarView(
             }
 
             Text(
-                text = currentMonth.value.format(DateTimeFormatter.ofPattern("MMMM yyyy")),
+                text = currentMonth.value.format(DateTimeFormatter.ofPattern("MMMM yyyy")).lowercase(),
                 style = MaterialTheme.typography.titleMedium,
-                color = Color.Black
+                color = MaterialTheme.colorScheme.onSurface
             )
 
             Box(
                 modifier = Modifier
-                    .border(2.dp, Color.Black)
+                    .border(1.dp, MaterialTheme.colorScheme.outline)
                     .clickable {
                         currentMonth.value = currentMonth.value.plusMonths(1)
                     }
@@ -516,7 +488,6 @@ private fun CalendarView(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Days of week header
         Row(modifier = Modifier.fillMaxWidth()) {
             daysOfWeek.forEach { day ->
                 Text(
@@ -524,22 +495,19 @@ private fun CalendarView(
                     modifier = Modifier.weight(1f),
                     textAlign = TextAlign.Center,
                     style = MaterialTheme.typography.labelMedium,
-                    color = Color.Gray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Calendar grid
         val firstDayOfMonth = currentMonth.value.atDay(1)
         val lastDayOfMonth = currentMonth.value.atEndOfMonth()
-        val startDayOfWeek = firstDayOfMonth.dayOfWeek.value % 7 // Sunday = 0
+        val startDayOfWeek = firstDayOfMonth.dayOfWeek.value % 7
 
         val days = buildList {
-            // Empty cells before first day
             repeat(startDayOfWeek) { add(null) }
-            // Days of month
             var day = firstDayOfMonth
             while (!day.isAfter(lastDayOfMonth)) {
                 add(day)
@@ -547,7 +515,6 @@ private fun CalendarView(
             }
         }
 
-        // Display in rows of 7
         days.chunked(7).forEach { week ->
             Row(modifier = Modifier.fillMaxWidth()) {
                 week.forEach { date ->
@@ -565,16 +532,10 @@ private fun CalendarView(
                                 modifier = Modifier
                                     .size(40.dp)
                                     .then(
-                                        if (isSelected) {
-                                            Modifier
-                                                .background(Color.Black)
-                                                .border(2.dp, Color.Black)
-                                        } else if (isHighlighted) {
-                                            Modifier
-                                                .background(Color.LightGray)
-                                                .border(2.dp, Color.Black)
-                                        } else {
-                                            Modifier
+                                        when {
+                                            isSelected -> Modifier.background(MaterialTheme.colorScheme.primary)
+                                            isHighlighted -> Modifier.background(MaterialTheme.colorScheme.surfaceVariant)
+                                            else -> Modifier
                                         }
                                     )
                                     .then(
@@ -590,16 +551,15 @@ private fun CalendarView(
                                     text = date.dayOfMonth.toString(),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = when {
-                                        isSelected -> Color.White
-                                        isPast -> Color.LightGray
-                                        else -> Color.Black
+                                        isSelected -> MaterialTheme.colorScheme.onPrimary
+                                        isPast -> MaterialTheme.colorScheme.outlineVariant
+                                        else -> MaterialTheme.colorScheme.onSurface
                                     }
                                 )
                             }
                         }
                     }
                 }
-                // Fill remaining cells if week is incomplete
                 repeat(7 - week.size) {
                     Spacer(modifier = Modifier.weight(1f))
                 }
@@ -607,3 +567,13 @@ private fun CalendarView(
         }
     }
 }
+
+// Alias for backward compatibility
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
+@Composable
+fun BrutalistDateTimePicker(
+    selectedDate: LocalDate,
+    selectedTime: LocalTime,
+    onDateTimeSelected: (LocalDate, LocalTime) -> Unit,
+    modifier: Modifier = Modifier
+) = MetroDateTimePicker(selectedDate, selectedTime, onDateTimeSelected, modifier)

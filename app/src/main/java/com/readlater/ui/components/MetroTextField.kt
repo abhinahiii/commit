@@ -10,14 +10,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 
 @Composable
-fun BrutalistTextField(
+fun MetroTextField(
     value: String,
     onValueChange: (String) -> Unit,
     label: String,
@@ -26,28 +23,37 @@ fun BrutalistTextField(
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         Text(
-            text = label.uppercase(),
+            text = label.lowercase(),
             style = MaterialTheme.typography.labelMedium,
-            color = Color.Black,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(bottom = 8.dp)
         )
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .border(2.dp, Color.Black)
+                .border(1.dp, MaterialTheme.colorScheme.outline)
                 .padding(16.dp)
         ) {
             BasicTextField(
                 value = value,
                 onValueChange = onValueChange,
                 modifier = Modifier.fillMaxWidth(),
-                textStyle = TextStyle(
-                    color = Color.Black,
-                    fontSize = 16.sp
+                textStyle = MaterialTheme.typography.bodyLarge.copy(
+                    color = MaterialTheme.colorScheme.onSurface
                 ),
                 singleLine = singleLine,
-                cursorBrush = SolidColor(Color.Black)
+                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary)
             )
         }
     }
 }
+
+// Alias for backward compatibility
+@Composable
+fun BrutalistTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    modifier: Modifier = Modifier,
+    singleLine: Boolean = true
+) = MetroTextField(value, onValueChange, label, modifier, singleLine)

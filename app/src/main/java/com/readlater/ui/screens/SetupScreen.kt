@@ -15,11 +15,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.readlater.data.AuthState
-import com.readlater.ui.components.BrutalistButton
+import com.readlater.ui.components.MetroButton
 
 @Composable
 fun SetupScreen(
@@ -31,23 +30,23 @@ fun SetupScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(Color.White)
+            .background(MaterialTheme.colorScheme.background)
             .padding(32.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "READLATER",
+            text = "readlater",
             style = MaterialTheme.typography.displayLarge,
-            color = Color.Black
+            color = MaterialTheme.colorScheme.onBackground
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "Schedule time for content you discover",
+            text = "schedule time for content you discover",
             style = MaterialTheme.typography.bodyLarge,
-            color = Color.Black,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
         )
 
@@ -56,15 +55,15 @@ fun SetupScreen(
         when (authState) {
             is AuthState.Loading -> {
                 Text(
-                    text = "LOADING...",
+                    text = "loading...",
                     style = MaterialTheme.typography.labelLarge,
-                    color = Color.Black
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
             is AuthState.NotAuthenticated -> {
-                BrutalistButton(
-                    text = "Connect Google Calendar",
+                MetroButton(
+                    text = "connect google calendar",
                     onClick = onConnectClick
                 )
 
@@ -73,13 +72,13 @@ fun SetupScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .border(2.dp, Color.Black)
+                        .border(1.dp, MaterialTheme.colorScheme.outline)
                         .padding(16.dp)
                 ) {
                     Text(
-                        text = "After connecting, share any link to ReadLater to schedule reading time on your calendar.",
+                        text = "after connecting, share any link to readlater to schedule reading time on your calendar.",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color.Black
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -88,28 +87,28 @@ fun SetupScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .border(2.dp, Color.Black)
+                        .border(1.dp, MaterialTheme.colorScheme.outline)
                         .padding(24.dp)
                 ) {
                     Column {
                         Text(
-                            text = "CONNECTED",
+                            text = "connected",
                             style = MaterialTheme.typography.labelLarge,
-                            color = Color.Black
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = authState.account.email ?: "Unknown",
+                            text = authState.account.email ?: "unknown",
                             style = MaterialTheme.typography.bodyLarge,
-                            color = Color.Black
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                BrutalistButton(
-                    text = "Disconnect",
+                MetroButton(
+                    text = "disconnect",
                     onClick = onDisconnectClick,
                     filled = false
                 )
@@ -119,20 +118,20 @@ fun SetupScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .border(2.dp, Color.Black)
+                        .border(1.dp, MaterialTheme.colorScheme.outline)
                         .padding(16.dp)
                 ) {
                     Column {
                         Text(
-                            text = "HOW TO USE",
+                            text = "how to use",
                             style = MaterialTheme.typography.labelMedium,
-                            color = Color.Black
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
-                            text = "1. Find an article or video\n2. Tap Share\n3. Select ReadLater\n4. Pick a date and time\n5. Event created on your calendar",
+                            text = "1. find an article or video\n2. tap share\n3. select readlater\n4. pick a date and time\n5. event created on your calendar",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Color.Black,
+                            color = MaterialTheme.colorScheme.onSurface,
                             lineHeight = MaterialTheme.typography.bodyMedium.lineHeight * 1.5
                         )
                     }
@@ -143,20 +142,20 @@ fun SetupScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .border(2.dp, Color.Black)
+                        .border(1.dp, MaterialTheme.colorScheme.outline)
                         .padding(16.dp)
                 ) {
                     Text(
-                        text = "ERROR: ${authState.message}",
+                        text = "error: ${authState.message.lowercase()}",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color.Black
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                BrutalistButton(
-                    text = "Try Again",
+                MetroButton(
+                    text = "try again",
                     onClick = onConnectClick
                 )
             }

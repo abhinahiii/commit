@@ -21,9 +21,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.readlater.ui.components.BrutalistButton
-import com.readlater.ui.components.BrutalistDateTimePicker
-import com.readlater.ui.components.BrutalistTextField
+import com.readlater.ui.components.MetroButton
+import com.readlater.ui.components.MetroDateTimePicker
+import com.readlater.ui.components.MetroTextField
 import java.time.LocalDate
 import java.time.LocalTime
 import java.util.Calendar
@@ -54,7 +54,6 @@ fun ShareOverlayContent(
         120 to "2h"
     )
 
-    // Check if selected time is in the past
     fun isTimeInPast(): Boolean {
         val calendar = Calendar.getInstance()
         val deviceDate = LocalDate.of(
@@ -74,8 +73,8 @@ fun ShareOverlayContent(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .background(Color.White)
-            .border(2.dp, Color.Black)
+            .background(MaterialTheme.colorScheme.surface)
+            .border(1.dp, MaterialTheme.colorScheme.outline)
     ) {
         Column(
             modifier = Modifier
@@ -84,9 +83,9 @@ fun ShareOverlayContent(
                 .verticalScroll(rememberScrollState())
         ) {
             Text(
-                text = "SCHEDULE",
+                text = "schedule",
                 style = MaterialTheme.typography.headlineMedium,
-                color = Color.Black
+                color = MaterialTheme.colorScheme.onSurface
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -94,21 +93,21 @@ fun ShareOverlayContent(
             Text(
                 text = url,
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color.Gray,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 2
             )
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            BrutalistTextField(
-                value = if (isFetchingTitle) "Loading..." else title,
+            MetroTextField(
+                value = if (isFetchingTitle) "loading..." else title,
                 onValueChange = onTitleChange,
-                label = if (isFetchingTitle) "TITLE (FETCHING...)" else "TITLE"
+                label = if (isFetchingTitle) "title (fetching...)" else "title"
             )
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            BrutalistDateTimePicker(
+            MetroDateTimePicker(
                 selectedDate = selectedDate,
                 selectedTime = selectedTime,
                 onDateTimeSelected = onDateTimeSelected
@@ -118,9 +117,9 @@ fun ShareOverlayContent(
 
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
-                    text = "DURATION",
+                    text = "duration",
                     style = MaterialTheme.typography.labelMedium,
-                    color = Color.Black,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
                 FlowRow(
@@ -132,15 +131,15 @@ fun ShareOverlayContent(
                         val isSelected = selectedDuration == minutes
                         Box(
                             modifier = Modifier
-                                .border(2.dp, Color.Black)
-                                .background(if (isSelected) Color.Black else Color.White)
+                                .border(1.dp, MaterialTheme.colorScheme.outline)
+                                .background(if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent)
                                 .clickable { onDurationSelected(minutes) }
                                 .padding(horizontal = 16.dp, vertical = 12.dp)
                         ) {
                             Text(
                                 text = label,
                                 style = MaterialTheme.typography.bodyLarge,
-                                color = if (isSelected) Color.White else Color.Black
+                                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
                             )
                         }
                     }
@@ -154,16 +153,16 @@ fun ShareOverlayContent(
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Box(modifier = Modifier.weight(1f)) {
-                    BrutalistButton(
-                        text = "Cancel",
+                    MetroButton(
+                        text = "cancel",
                         onClick = onCancel,
                         filled = false,
                         enabled = !isLoading
                     )
                 }
                 Box(modifier = Modifier.weight(1f)) {
-                    BrutalistButton(
-                        text = if (isLoading) "Saving..." else "Save",
+                    MetroButton(
+                        text = if (isLoading) "saving..." else "save",
                         onClick = onSave,
                         enabled = !isLoading && title.isNotBlank() && !timeInPast
                     )
@@ -182,23 +181,23 @@ fun NotConnectedOverlay(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .background(Color.White)
-            .border(2.dp, Color.Black)
+            .background(MaterialTheme.colorScheme.surface)
+            .border(1.dp, MaterialTheme.colorScheme.outline)
             .padding(24.dp)
     ) {
         Column {
             Text(
-                text = "NOT CONNECTED",
+                text = "not connected",
                 style = MaterialTheme.typography.headlineMedium,
-                color = Color.Black
+                color = MaterialTheme.colorScheme.onSurface
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = "Connect your Google Calendar first to schedule reading time.",
+                text = "connect your google calendar first to schedule reading time.",
                 style = MaterialTheme.typography.bodyLarge,
-                color = Color.Black
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -208,15 +207,15 @@ fun NotConnectedOverlay(
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Box(modifier = Modifier.weight(1f)) {
-                    BrutalistButton(
-                        text = "Cancel",
+                    MetroButton(
+                        text = "cancel",
                         onClick = onCancel,
                         filled = false
                     )
                 }
                 Box(modifier = Modifier.weight(1f)) {
-                    BrutalistButton(
-                        text = "Open App",
+                    MetroButton(
+                        text = "open app",
                         onClick = onOpenApp
                     )
                 }
