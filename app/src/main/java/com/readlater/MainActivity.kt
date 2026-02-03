@@ -99,6 +99,13 @@ class MainActivity : ComponentActivity() {
                             ).show()
                         }
                     },
+                    onSettingsClick = {
+                        Toast.makeText(
+                            this@MainActivity,
+                            "Settings coming soon",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    },
                     onCancelEvent = { event ->
                         scope.launch {
                             isLoading = true

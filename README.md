@@ -1,80 +1,82 @@
-# ReadLater
+# readlater
 
-Schedule time for content you discover. Share any link to create a Google Calendar event.
+i bookmark a lot of articles and videos but i forget to watch or read them.
 
-## Setup
+so, i am designing an app that lets me share articles or videos directly into it, and it automatically creates a google calendar event so i stay reminded.
 
-### 1. Google Cloud Console Setup
+## setup
 
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project or select an existing one
-3. Enable the **Google Calendar API**:
-   - Go to APIs & Services > Library
-   - Search for "Google Calendar API"
-   - Click Enable
+### 1. google cloud console setup
 
-4. Configure OAuth Consent Screen:
-   - Go to APIs & Services > OAuth consent screen
-   - Select "External" user type
-   - Fill in app name: "ReadLater"
-   - Add your email as developer contact
-   - Add scope: `https://www.googleapis.com/auth/calendar.events`
-   - Add your email as a test user (required while in testing mode)
+1. go to [google cloud console](https://console.cloud.google.com/)
+2. create a new project or select an existing one
+3. enable the **google calendar api**:
+   - go to apis & services > library
+   - search for "google calendar api"
+   - click enable
 
-5. Create OAuth 2.0 Credentials:
-   - Go to APIs & Services > Credentials
-   - Click "Create Credentials" > OAuth client ID
-   - Select "Android" as application type
-   - Package name: `com.readlater`
-   - Get your SHA-1 fingerprint:
+4. configure oauth consent screen:
+   - go to apis & services > oauth consent screen
+   - select "external" user type
+   - fill in app name: "readlater"
+   - add your email as developer contact
+   - add scope: `https://www.googleapis.com/auth/calendar.events`
+   - add your email as a test user (required while in testing mode)
+
+5. create oauth 2.0 credentials:
+   - go to apis & services > credentials
+   - click "create credentials" > oauth client id
+   - select "android" as application type
+   - package name: `com.readlater`
+   - get your sha-1 fingerprint:
      ```bash
-     # For debug builds
+     # for debug builds
      keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android
      ```
-   - Enter the SHA-1 fingerprint
-   - Click Create
+   - enter the sha-1 fingerprint
+   - click create
 
-### 2. Build the App
+### 2. build the app
 
 ```bash
 cd readlater
 ./gradlew assembleDebug
 ```
 
-The APK will be at `app/build/outputs/apk/debug/app-debug.apk`
+the apk will be at `app/build/outputs/apk/debug/app-debug.apk`
 
-### 3. Install and Use
+### 3. install and use
 
-1. Install the APK on your Android device
-2. Open ReadLater and tap "Connect Google Calendar"
-3. Sign in with your Google account
-4. Grant calendar permissions
-5. Now share any link to ReadLater from any app
+1. install the apk on your android device
+2. open readlater and tap "connect google calendar"
+3. sign in with your google account
+4. grant calendar permissions
+5. now share any link to readlater from any app
 
-## Project Structure
+## project structure
 
 ```
 readlater/
 ├── app/src/main/java/com/readlater/
-│   ├── MainActivity.kt          # Setup screen
-│   ├── ShareActivity.kt         # Share overlay
-│   ├── ReadLaterApp.kt          # Application class
+│   ├── MainActivity.kt          # setup screen
+│   ├── ShareActivity.kt         # share overlay
+│   ├── ReadLaterApp.kt          # application class
 │   ├── ui/
-│   │   ├── theme/Theme.kt       # Brutalist theme
-│   │   ├── components/          # Reusable UI components
-│   │   └── screens/             # Screen composables
+│   │   ├── theme/Theme.kt       # metro theme
+│   │   ├── components/          # reusable ui components
+│   │   └── screens/             # screen composables
 │   ├── data/
-│   │   ├── AuthRepository.kt    # Google auth
-│   │   └── CalendarRepository.kt # Calendar API
+│   │   ├── AuthRepository.kt    # google auth
+│   │   └── CalendarRepository.kt # calendar api
 │   └── util/
-│       └── UrlMetadataFetcher.kt # URL title fetching
+│       └── UrlMetadataFetcher.kt # url title fetching
 └── app/src/main/AndroidManifest.xml
 ```
 
-## Tech Stack
+## tech stack
 
-- Kotlin + Jetpack Compose
-- Google Sign-In SDK
-- Google Calendar API
-- Jsoup (HTML parsing)
-- Material 3 (styled brutalist)
+- kotlin + jetpack compose
+- google sign-in sdk
+- google calendar api
+- jsoup (html parsing)
+- material 3 (metro style)
