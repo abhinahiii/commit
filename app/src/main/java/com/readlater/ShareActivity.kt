@@ -1,6 +1,9 @@
 package com.readlater
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -22,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import com.readlater.data.AuthRepository
 import com.readlater.data.AuthState
 import com.readlater.data.CalendarRepository
@@ -44,6 +48,10 @@ class ShareActivity : ComponentActivity() {
     private lateinit var calendarRepository: CalendarRepository
     private lateinit var eventRepository: EventRepository
     private lateinit var themeRepository: ThemeRepository
+
+    private val notificationPermissionLauncher = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { }
 
     private fun getDeviceDate(): LocalDate {
         val calendar = Calendar.getInstance()
@@ -76,6 +84,13 @@ class ShareActivity : ComponentActivity() {
         eventRepository = EventRepository(applicationContext, calendarRepository)
         themeRepository = ThemeRepository(applicationContext)
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val permission = Manifest.permission.POST_NOTIFICATIONS
+            if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
+                notificationPermissionLauncher.launch(permission)
+            }
+        }
+
         val sharedText = intent?.getStringExtra(Intent.EXTRA_TEXT) ?: ""
         val sharedUrl = UrlMetadataFetcher.extractUrl(sharedText) ?: sharedText
 
@@ -95,6 +110,7 @@ class ShareActivity : ComponentActivity() {
                 var selectedDuration by remember { mutableIntStateOf(30) }
                 var isLoading by remember { mutableStateOf(false) }
                 var isFetchingTitle by remember { mutableStateOf(false) }
+                var imageUrl by remember { mutableStateOf<String?>(null) }
 
                 // Fetch title on launch
                 androidx.compose.runtime.LaunchedEffect(sharedUrl) {
@@ -103,6 +119,10 @@ class ShareActivity : ComponentActivity() {
                         val fetchedTitle = UrlMetadataFetcher.fetchTitle(sharedUrl)
                         if (fetchedTitle != null && title.isBlank()) {
                             title = fetchedTitle
+                        }
+                        val fetchedImage = UrlMetadataFetcher.fetchImageUrl(sharedUrl)
+                        if (!fetchedImage.isNullOrBlank()) {
+                            imageUrl = fetchedImage
                         }
                         isFetchingTitle = false
                     }
@@ -157,6 +177,7 @@ class ShareActivity : ComponentActivity() {
                                                 account = account,
                                                 title = title,
                                                 description = sharedUrl,
+                                                imageUrl = imageUrl,
                                                 startDateTime = dateTime,
                                                 durationMinutes = selectedDuration
                                             )
@@ -166,6 +187,7 @@ class ShareActivity : ComponentActivity() {
                                                     googleEventId = eventId,
                                                     title = title,
                                                     url = sharedUrl,
+                                                    imageUrl = imageUrl,
                                                     scheduledDateTime = dateTime,
                                                     durationMinutes = selectedDuration
                                                 )

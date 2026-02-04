@@ -12,7 +12,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.readlater.ui.theme.DarkThemeColors
+import com.readlater.ui.theme.CommitColors
+import com.readlater.ui.theme.CommitTypography
 
 @Composable
 fun MetroButton(
@@ -29,22 +30,22 @@ fun MetroButton(
                 .height(48.dp)
                 .fillMaxWidth(),
             enabled = enabled,
-            shape = MaterialTheme.shapes.medium,
+            shape = MaterialTheme.shapes.extraSmall, // Radius 2px
             colors = ButtonDefaults.buttonColors(
-                containerColor = DarkThemeColors.TextPrimary,
-                contentColor = DarkThemeColors.Background,
-                disabledContainerColor = DarkThemeColors.Border,
-                disabledContentColor = DarkThemeColors.TextSecondary
+                containerColor = CommitColors.Rust,
+                contentColor = CommitColors.Cream,
+                disabledContainerColor = CommitColors.Line,
+                disabledContentColor = CommitColors.InkSoft
             ),
             contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
             elevation = ButtonDefaults.buttonElevation(
-                defaultElevation = 0.dp,
+                defaultElevation = 2.dp, // Slight lift
                 pressedElevation = 0.dp
             )
         ) {
             Text(
                 text = text.uppercase(),
-                style = MaterialTheme.typography.labelLarge
+                style = CommitTypography.Label.copy(color = CommitColors.Cream)
             )
         }
     } else {
@@ -54,30 +55,21 @@ fun MetroButton(
                 .height(48.dp)
                 .fillMaxWidth(),
             enabled = enabled,
-            shape = MaterialTheme.shapes.medium,
+            shape = MaterialTheme.shapes.extraSmall,
             colors = ButtonDefaults.outlinedButtonColors(
-                contentColor = DarkThemeColors.TextPrimary,
-                disabledContentColor = DarkThemeColors.TextSecondary
+                contentColor = CommitColors.Ink,
+                disabledContentColor = CommitColors.InkSoft
             ),
             border = BorderStroke(
                 1.dp,
-                if (enabled) DarkThemeColors.Border else DarkThemeColors.Border.copy(alpha = 0.5f)
+                if (enabled) CommitColors.Ink else CommitColors.Line
             ),
             contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
         ) {
             Text(
                 text = text.uppercase(),
-                style = MaterialTheme.typography.labelLarge
+                style = CommitTypography.Label.copy(color = CommitColors.Ink)
             )
         }
     }
 }
-
-@Composable
-fun BrutalistButton(
-    text: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-    filled: Boolean = true
-) = MetroButton(text, onClick, modifier, enabled, filled)

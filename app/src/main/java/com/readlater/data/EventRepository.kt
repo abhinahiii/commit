@@ -2,6 +2,8 @@ package com.readlater.data
 
 import android.content.Context
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount
+import com.readlater.notifications.NotificationScheduler
+import com.readlater.util.UrlMetadataFetcher
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -15,6 +17,7 @@ class EventRepository(
 ) {
     private val database = AppDatabase.getDatabase(context)
     private val dao = database.savedEventDao()
+    private val notificationScheduler = NotificationScheduler(context)
 
     // Get all scheduled (not completed) events - sorted with overdue first
     fun getUpcomingEvents(): Flow<List<SavedEvent>> {
@@ -76,7 +79,8 @@ class EventRepository(
         title: String,
         url: String,
         scheduledDateTime: LocalDateTime,
-        durationMinutes: Int
+        durationMinutes: Int,
+        imageUrl: String? = null
     ) {
         val epochMillis = scheduledDateTime
             .atZone(ZoneId.systemDefault())
@@ -87,18 +91,26 @@ class EventRepository(
             googleEventId = googleEventId,
             title = title,
             url = url,
+            imageUrl = imageUrl,
             scheduledDateTime = epochMillis,
             durationMinutes = durationMinutes,
             createdAt = System.currentTimeMillis(),
             status = EventStatus.SCHEDULED
         )
         dao.insertEvent(event)
+        notificationScheduler.scheduleReminder(
+            eventId = googleEventId,
+            title = title,
+            url = url,
+            scheduledAtMillis = epochMillis
+        )
     }
 
     // Mark event as completed
     suspend fun markAsCompleted(eventId: String): Result<Unit> {
         return try {
             dao.markAsCompleted(eventId, System.currentTimeMillis())
+            notificationScheduler.cancelReminder(eventId)
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -109,6 +121,15 @@ class EventRepository(
     suspend fun undoComplete(eventId: String): Result<Unit> {
         return try {
             dao.undoComplete(eventId)
+            val event = dao.getEventById(eventId)
+            if (event != null && event.scheduledDateTime > System.currentTimeMillis()) {
+                notificationScheduler.scheduleReminder(
+                    eventId = event.googleEventId,
+                    title = event.title,
+                    url = event.url,
+                    scheduledAtMillis = event.scheduledDateTime
+                )
+            }
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -126,6 +147,7 @@ class EventRepository(
         return result.map {
             // Mark as archived locally
             dao.markAsArchived(eventId, System.currentTimeMillis())
+            notificationScheduler.cancelReminder(eventId)
         }
     }
 
@@ -143,6 +165,7 @@ class EventRepository(
             account = account,
             title = event.title,
             description = event.url,
+            imageUrl = event.imageUrl,
             startDateTime = scheduledDateTime,
             durationMinutes = event.durationMinutes
         )
@@ -155,7 +178,8 @@ class EventRepository(
                 title = event.title,
                 url = event.url,
                 scheduledDateTime = scheduledDateTime,
-                durationMinutes = event.durationMinutes
+                durationMinutes = event.durationMinutes,
+                imageUrl = event.imageUrl
             )
             newEventId
         }
@@ -165,6 +189,7 @@ class EventRepository(
     suspend fun deleteEventPermanently(eventId: String): Result<Unit> {
         return try {
             dao.deleteEvent(eventId)
+            notificationScheduler.cancelReminder(eventId)
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -188,6 +213,15 @@ class EventRepository(
                 .toInstant()
                 .toEpochMilli()
             dao.updateEventDateTime(eventId, epochMillis)
+            val updated = dao.getEventById(eventId)
+            if (updated != null) {
+                notificationScheduler.scheduleReminder(
+                    eventId = updated.googleEventId,
+                    title = updated.title,
+                    url = updated.url,
+                    scheduledAtMillis = epochMillis
+                )
+            }
         }
     }
 
@@ -203,6 +237,7 @@ class EventRepository(
             account = account,
             title = originalEvent.title,
             description = originalEvent.url,
+            imageUrl = originalEvent.imageUrl,
             startDateTime = newDateTime,
             durationMinutes = durationMinutes
         )
@@ -214,7 +249,8 @@ class EventRepository(
                 title = originalEvent.title,
                 url = originalEvent.url,
                 scheduledDateTime = newDateTime,
-                durationMinutes = durationMinutes
+                durationMinutes = durationMinutes,
+                imageUrl = originalEvent.imageUrl
             )
             newEventId
         }
@@ -235,7 +271,21 @@ class EventRepository(
                 if (calendarEvent == null) {
                     // Event was deleted from Google Calendar
                     dao.updateEventStatus(event.googleEventId, EventStatus.DELETED_FROM_CALENDAR)
+                    notificationScheduler.cancelReminder(event.googleEventId)
                 }
+            }
+        }
+    }
+
+    suspend fun refreshMissingImages(limit: Int = 8) {
+        val missing = dao.getEventsMissingImage(limit)
+        if (missing.isEmpty()) return
+
+        for (event in missing) {
+            if (!event.url.startsWith("http")) continue
+            val imageUrl = UrlMetadataFetcher.fetchImageUrl(event.url)
+            if (!imageUrl.isNullOrBlank()) {
+                dao.updateEventImage(event.googleEventId, imageUrl)
             }
         }
     }

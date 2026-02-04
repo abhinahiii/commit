@@ -38,6 +38,10 @@ interface SavedEventDao {
     @Query("UPDATE saved_events SET status = :status WHERE googleEventId = :eventId")
     suspend fun updateEventStatus(eventId: String, status: EventStatus)
 
+    // Update event image
+    @Query("UPDATE saved_events SET imageUrl = :imageUrl WHERE googleEventId = :eventId")
+    suspend fun updateEventImage(eventId: String, imageUrl: String?)
+
     // Mark as completed
     @Query("UPDATE saved_events SET status = :status, completedAt = :completedAt WHERE googleEventId = :eventId")
     suspend fun markAsCompleted(eventId: String, completedAt: Long, status: EventStatus = EventStatus.COMPLETED)
@@ -65,6 +69,10 @@ interface SavedEventDao {
     // Get all events (for sync)
     @Query("SELECT * FROM saved_events")
     suspend fun getAllEventsOnce(): List<SavedEvent>
+
+    // Get events missing thumbnails
+    @Query("SELECT * FROM saved_events WHERE imageUrl IS NULL OR imageUrl = '' LIMIT :limit")
+    suspend fun getEventsMissingImage(limit: Int): List<SavedEvent>
 
     // Count scheduled events for today
     @Query("SELECT COUNT(*) FROM saved_events WHERE status = :status AND scheduledDateTime >= :startOfDay AND scheduledDateTime < :endOfDay")

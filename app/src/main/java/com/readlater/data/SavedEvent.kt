@@ -15,6 +15,7 @@ data class SavedEvent(
     @PrimaryKey val googleEventId: String,
     val title: String,
     val url: String,
+    val imageUrl: String? = null,
     val scheduledDateTime: Long,  // epoch millis
     val durationMinutes: Int,
     val createdAt: Long,

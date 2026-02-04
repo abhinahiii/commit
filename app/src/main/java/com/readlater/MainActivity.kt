@@ -1,10 +1,14 @@
 package com.readlater
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.contract.ActivityResultContracts.RequestPermission
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -12,6 +16,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.core.content.ContextCompat
 import com.readlater.data.AuthRepository
 import com.readlater.data.AuthState
 import com.readlater.data.CalendarRepository
@@ -21,9 +26,11 @@ import com.readlater.data.ThemeRepository
 import com.readlater.ui.components.RescheduleDialog
 import com.readlater.ui.screens.HomeScreen
 import com.readlater.ui.theme.ReadLaterTheme
+import com.readlater.util.UrlMetadataFetcher
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
 import java.util.Locale
@@ -41,6 +48,10 @@ class MainActivity : ComponentActivity() {
         authRepository.handleSignInResult(result.data)
     }
 
+    private val notificationPermissionLauncher = registerForActivityResult(
+        RequestPermission()
+    ) { }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -48,6 +59,13 @@ class MainActivity : ComponentActivity() {
         calendarRepository = CalendarRepository(applicationContext)
         eventRepository = EventRepository(applicationContext, calendarRepository)
         themeRepository = ThemeRepository(applicationContext)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val permission = Manifest.permission.POST_NOTIFICATIONS
+            if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
+                notificationPermissionLauncher.launch(permission)
+            }
+        }
 
         setContent {
             val useDarkTheme by themeRepository.useDarkTheme.collectAsState(initial = true)
@@ -89,6 +107,7 @@ class MainActivity : ComponentActivity() {
                             try {
                                 eventRepository.syncWithCalendar(account)
                                 summaryMessage = eventRepository.getSummaryMessage()
+                                eventRepository.refreshMissingImages()
                             } catch (e: Exception) {
                                 // Silently fail sync
                             }
@@ -176,7 +195,7 @@ class MainActivity : ComponentActivity() {
                                     this@MainActivity,
                                     "failed: ${error.message}".lowercase(Locale.ROOT),
                                     Toast.LENGTH_LONG
-                                ).show()
+                                    ).show()
                             }
                             isLoading = false
                         }
@@ -249,6 +268,38 @@ class MainActivity : ComponentActivity() {
                                 ).show()
                             }
                             isLoading = false
+                        }
+                    },
+                    onManualAddEvent = { url, title, date, time, duration ->
+                        val account = authRepository.getAccount()
+                        if (account == null) {
+                            Result.failure(IllegalStateException("not connected"))
+                        } else {
+                            val dateTime = LocalDateTime.of(date, time)
+                            val imageUrl = UrlMetadataFetcher.fetchImageUrl(url)
+                            val result = calendarRepository.createEvent(
+                                account = account,
+                                title = title,
+                                description = url,
+                                imageUrl = imageUrl,
+                                startDateTime = dateTime,
+                                durationMinutes = duration
+                            )
+                            result.fold(
+                                onSuccess = { eventId ->
+                                    eventRepository.saveEvent(
+                                        googleEventId = eventId,
+                                        title = title,
+                                        url = url,
+                                        imageUrl = imageUrl,
+                                        scheduledDateTime = dateTime,
+                                        durationMinutes = duration
+                                    )
+                                    summaryMessage = eventRepository.getSummaryMessage()
+                                    Result.success(Unit)
+                                },
+                                onFailure = { error -> Result.failure(error) }
+                            )
                         }
                     }
                 )

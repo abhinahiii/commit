@@ -39,6 +39,7 @@ class CalendarRepository(private val context: Context) {
         account: GoogleSignInAccount,
         title: String,
         description: String,
+        imageUrl: String? = null,
         startDateTime: LocalDateTime,
         durationMinutes: Int
     ): Result<String> = withContext(Dispatchers.IO) {
@@ -53,9 +54,15 @@ class CalendarRepository(private val context: Context) {
                 .atZone(ZoneId.systemDefault())
                 .toInstant()
 
+            val fullDescription = if (!imageUrl.isNullOrBlank()) {
+                "$description\n\nImage: $imageUrl"
+            } else {
+                description
+            }
+
             val event = Event().apply {
                 summary = title
-                this.description = description
+                this.description = fullDescription
                 start = EventDateTime().apply {
                     dateTime = DateTime(Date.from(startInstant))
                     timeZone = ZoneId.systemDefault().id
