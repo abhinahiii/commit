@@ -1,16 +1,16 @@
-# readlater
+# Commit
 
-i bookmark a lot of articles and videos but i forget to watch or read them.
+I bookmark a lot of articles and videos but I forget to watch or read them.
 
-so, i built an app that lets me share articles or videos directly into it, and it automatically creates a google calendar event so i stay reminded.
+So, I built an app that lets me share articles or videos directly into it, and it automatically creates a Google Calendar event so I stay reminded.
 
-## features
+## Features
 
-- **share to schedule** — share any link from any app, pick a time, and it's on your calendar
-- **smart home screen** — see your upcoming items, what's overdue, and a friendly greeting
-- **event management** — mark items as done, reschedule, or archive them
-- **calendar sync** — stays in sync with google calendar, so if you delete an event there, it updates here
-- **minimal design** — clean, light interface inspired by metro ui
+- **Share to Commit** — Share any link from any app, pick a time, and it's on your calendar
+- **Smart Home Screen** — See your upcoming items, what's overdue, and a friendly greeting
+- **Event Management** — Mark items as done, reschedule, or archive them
+- **Calendar Sync** — Stays in sync with Google Calendar, so if you delete an event there, it updates here
+- **Premium Design** — Clean, "Paper" interface with noise textures and serif typography
 
 ## how it works
 
@@ -123,3 +123,6 @@ appears when you share a link. pick title, date, time, and duration.
 ## license
 
 mit
+=======
+# commit
+>>>>>>> b34daca33dbb3e431852bab67348212a143c6295
