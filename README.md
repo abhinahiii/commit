@@ -1,128 +1,80 @@
 # Commit
 
-I bookmark a lot of articles and videos but I forget to watch or read them.
+> **Bookmarks are intentions. Commitments are actions.**
 
-So, I built an app that lets me share articles or videos directly into it, and it automatically creates a Google Calendar event so I stay reminded.
+We save countless articles, videos, and threads, promising ourselves we'll get to them "later." But later rarely comes. The backlog grows, and so does the guilt.
+
+**Commit** is different. It’s not a bookmark manager—it’s an action scheduler. When you share content to Commit, you don't just save it; you promise a time to engage with it.
+
+---
+
+<div align="center">
+  <img src="docs/hero.png" width="800" alt="Commit App Hero" />
+</div>
 
 ## Features
 
-- **Share to Commit** — Share any link from any app, pick a time, and it's on your calendar
-- **Smart Home Screen** — See your upcoming items, what's overdue, and a friendly greeting
-- **Event Management** — Mark items as done, reschedule, or archive them
-- **Calendar Sync** — Stays in sync with Google Calendar, so if you delete an event there, it updates here
-- **Premium Design** — Clean, "Paper" interface with noise textures and serif typography
+### 📅 Intentional Scheduling
+Share any link from any app directly to Commit. Instead of a "Save" button, you get a "Commit" prompt. Choose **Tomorrow Morning**, **This Weekend**, or a specific time slot. It syncs instantly to your Google Calendar.
 
-## how it works
+### 🎨 Premium "Paper" Design
+A visual departure from standard apps. Commit features a tactile **Paper** aesthetic with noise textures, diffused shadows, and editorial serif typography. It feels grounded, calm, and indistinguishable from a printed agenda.
 
-1. share a link to readlater from any app (browser, twitter, youtube, etc.)
-2. pick when you want to read/watch it
-3. readlater creates a calendar event with the link
-4. when the time comes, your calendar reminds you
+### 🧠 Smart Insights
+- **Dynamic Greetings**: The home screen welcomes you based on the time of day and your remaining load (e.g., *"Good afternoon. Finish your day strong."*).
+- **Time Budgeting**: The app gently warns you if you're over-committing to too much content in a single day.
+- **Reflection**: When you mark an item as done, Commit asks, *"Was this worth your time?"*, helping you build better content consumption habits.
 
-## setup
+### 🔥 Streaks & Progress
+Track your consistency with a subtle **Streak Indicator**. Watch your daily commitments turn into a chain of completed actions.
 
-### 1. google cloud console setup
+---
 
-1. go to [google cloud console](https://console.cloud.google.com/)
-2. create a new project or select an existing one
-3. enable the **google calendar api**:
-   - go to apis & services > library
-   - search for "google calendar api"
-   - click enable
+## How It Works
 
-4. configure oauth consent screen:
-   - go to apis & services > oauth consent screen
-   - select "external" user type
-   - fill in app name: "readlater"
-   - add your email as developer contact
-   - add scope: `https://www.googleapis.com/auth/calendar.events`
-   - add your email as a test user (required while in testing mode)
+1.  **Share**: Find an article or video in Chrome, YouTube, or Twitter. Tap "Share" and select **Commit**.
+2.  **Commit**: A beautiful overlay slides up. Tap a smart chip like "Tomorrow Morning" or pick a custom time.
+3.  **Action**: The event is added to your Google Calendar. When the time comes, you get a reminder.
+4.  **Reflect**: After you read/watch, mark it done in the app and reflect on its value.
 
-5. create oauth 2.0 credentials:
-   - go to apis & services > credentials
-   - click "create credentials" > oauth client id
-   - select "android" as application type
-   - package name: `com.readlater`
-   - get your sha-1 fingerprint:
-     ```bash
-     # for debug builds
-     keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android
-     ```
-   - enter the sha-1 fingerprint
-   - click create
+---
 
-### 2. build the app
+## Setup & Build
 
+### Prerequisites
+-   Android Studio Koala or newer
+-   JDK 17
+-   Google Cloud Console Project (for Calendar API)
+
+### Google Cloud Setup
+1.  Create a project in [Google Cloud Console](https://console.cloud.google.com/).
+2.  Enable **Google Calendar API**.
+3.  Create OAuth 2.0 Credentials (Android).
+    -   Package name: `com.readlater` (Note: internal ID remains legacy for now).
+    -   Add your SHA-1 fingerprint (debug/release).
+4.  Add your email as a Test User in the OAuth Consent Screen.
+
+### Build
 ```bash
-cd readlater
+git clone https://github.com/abhinahiii/commit.git
+cd commit
 ./gradlew assembleDebug
 ```
 
-the apk will be at `app/build/outputs/apk/debug/app-debug.apk`
+---
 
-### 3. install and use
+## Tech Stack
 
-1. install the apk on your android device
-2. open readlater and tap "connect google calendar"
-3. sign in with your google account
-4. grant calendar permissions
-5. share any link to readlater from any app
+-   **Language**: Kotlin
+-   **UI**: Jetpack Compose (Material 3 heavily customized)
+-   **Architecture**: MVVM
+-   **Local Data**: Room Database
+-   **Remote Sync**: Google Calendar API v3
+-   **Auth**: Google Sign-In
+-   **Parsing**: Jsoup (for link metadata)
 
-## project structure
+---
 
-```
-readlater/
-├── app/src/main/java/com/readlater/
-│   ├── MainActivity.kt              # home screen host
-│   ├── ShareActivity.kt             # share overlay
-│   ├── ReadLaterApp.kt              # application class
-│   ├── ui/
-│   │   ├── theme/Theme.kt           # light theme, clean typography
-│   │   ├── components/
-│   │   │   ├── EventCard.kt         # event display cards
-│   │   │   ├── MetroButton.kt       # styled buttons
-│   │   │   ├── RescheduleDialog.kt  # date/time picker dialog
-│   │   │   └── ConfirmationDialogs.kt
-│   │   └── screens/
-│   │       ├── HomeScreen.kt        # main screen with tabs
-│   │       └── ShareOverlayScreen.kt
-│   ├── data/
-│   │   ├── AuthRepository.kt        # google sign-in
-│   │   ├── CalendarRepository.kt    # google calendar api
-│   │   ├── EventRepository.kt       # local + remote sync
-│   │   ├── SavedEvent.kt            # event entity
-│   │   ├── SavedEventDao.kt         # room dao
-│   │   └── AppDatabase.kt           # room database
-│   └── util/
-│       └── UrlMetadataFetcher.kt    # url title fetching
-└── app/src/main/AndroidManifest.xml
-```
+## License
 
-## tech stack
-
-- kotlin + jetpack compose
-- room database (local event storage)
-- google sign-in sdk
-- google calendar api
-- jsoup (html parsing for link titles)
-- material 3
-
-## screens
-
-### onboarding
-connect your google calendar to get started.
-
-### home
-- **upcoming** — events you've scheduled, sorted by date
-- **done** — items you've marked as complete
-- **archived** — items you've archived (can restore or delete)
-
-### share overlay
-appears when you share a link. pick title, date, time, and duration.
-
-## license
-
-mit
-=======
-# commit
->>>>>>> b34daca33dbb3e431852bab67348212a143c6295
+MIT. Go build something inevitable.
