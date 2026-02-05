@@ -3,8 +3,15 @@ package com.readlater.ui.screens
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.expandVertically
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,8 +22,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -27,11 +39,22 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -49,6 +72,7 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 
 @Composable
 fun HomeScreen(
@@ -74,7 +98,6 @@ fun HomeScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-
     val noiseBitmap = rememberNoiseTexture()
 
     Box(modifier = modifier.fillMaxSize()) {
@@ -89,8 +112,8 @@ fun HomeScreen(
         Image(
             bitmap = noiseBitmap,
             contentDescription = null,
-            modifier = Modifier.fillMaxSize().alpha(0.08f), // Opacity 8%
-            contentScale = ContentScale.Crop, // Tile/Crop logic needed ideally, but filling typically works for noise
+            modifier = Modifier.fillMaxSize().alpha(0.08f),
+            contentScale = ContentScale.Crop,
             colorFilter = ColorFilter.tint(CommitColors.Ink, BlendMode.Multiply)
         )
 
@@ -99,7 +122,7 @@ fun HomeScreen(
             is AuthState.Loading -> LoadingScreen(Modifier.fillMaxSize())
             is AuthState.NotAuthenticated -> NotAuthenticatedScreen(onConnectClick, Modifier.fillMaxSize())
             is AuthState.Authenticated -> {
-                CommitHomeScreen(
+                DashboardScreen(
                     upcomingEvents = upcomingEvents,
                     completedEvents = completedEvents,
                     onRescheduleEvent = onRescheduleEvent,
@@ -113,262 +136,433 @@ fun HomeScreen(
 }
 
 @Composable
-private fun CommitHomeScreen(
+private fun DashboardScreen(
     upcomingEvents: List<SavedEvent>,
     completedEvents: List<SavedEvent>,
     onRescheduleEvent: (SavedEvent) -> Unit,
     onMarkDoneEvent: (SavedEvent) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val now = Instant.now()
     val zoneId = ZoneId.systemDefault()
     val todayDate = LocalDate.now(zoneId)
 
-    // Filter events
-    val (todayEvents, futureEvents) = remember(upcomingEvents) {
-         upcomingEvents
-             .sortedBy { it.scheduledDateTime }
-             .partition { 
-                 Instant.ofEpochMilli(it.scheduledDateTime)
-                     .atZone(zoneId)
-                     .toLocalDate() == todayDate 
-             }
+    // Filter Logic
+    val (todayEvents, otherEvents) = remember(upcomingEvents) {
+        upcomingEvents
+            .sortedBy { it.scheduledDateTime }
+            .partition { 
+                val dt = Instant.ofEpochMilli(it.scheduledDateTime)
+                    .atZone(zoneId)
+                    .toLocalDate()
+                dt == todayDate || dt.isBefore(todayDate) // Include overdue in today for now or separate
+            }
+    }
+    
+    // Split Today into Overdue and Today
+    val (overdueEvents, actualTodayEvents) = todayEvents.partition { 
+         val dt = Instant.ofEpochMilli(it.scheduledDateTime).atZone(zoneId)
+         dt.toLocalDate().isBefore(todayDate) || (dt.toLocalDate() == todayDate && dt.toLocalTime().isBefore(LocalTime.now()))
     }
 
-    val currentCommitment = todayEvents.firstOrNull() 
-    val remainingToday = todayEvents.drop(1)
-    val laterEvents = remainingToday + futureEvents
+    // Future
+    val futureEvents = otherEvents.filter { 
+         Instant.ofEpochMilli(it.scheduledDateTime).atZone(zoneId).toLocalDate().isAfter(todayDate)
+    }
 
-    // Streaks
+    // Streaks Calc
     val streak = remember(completedEvents) { calculateStreak(completedEvents) }
     
-    // Reflection Dialog State
-    var eventToReflect by remember { androidx.compose.runtime.mutableStateOf<SavedEvent?>(null) }
+    // FAB Logic placeholder
+    var showNewCommitment by remember { mutableStateOf(false) }
 
-    if (eventToReflect != null) {
-        com.readlater.ui.components.ReflectionDialog(
-            onDismiss = { eventToReflect = null },
-            onSubmit = { wasWorthIt ->
-                // Here we would log the 'wasWorthIt' result
-                onMarkDoneEvent(eventToReflect!!)
-                eventToReflect = null
+    Box(modifier = modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            // App Bar
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 24.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("commit.", style = CommitTypography.Brand.copy(fontSize = 32.sp))
+                Text(
+                    "SETTINGS", 
+                    style = CommitTypography.Label.copy(
+                        color = CommitColors.InkSoft,
+                        letterSpacing = 0.2.em
+                    ),
+                    modifier = Modifier.clickable { /* Settings */ }
+                )
             }
-        )
-    }
 
-    LazyColumn(
-        modifier = modifier.padding(horizontal = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(48.dp)
-    ) {
-        item {
-            Spacer(modifier = Modifier.height(60.dp))
-            HeaderSection(remainingCount = todayEvents.size, streak = streak)
-        }
-
-        item {
-            SectionLabel(text = "Now")
-            if (currentCommitment != null) {
-                // Stack Hint must be BEHIND the card visually.
-                Box {
-                    StackHint() // Drawn first = Behind
-                    CommitmentCard(
-                        event = currentCommitment,
-                        onReschedule = { onRescheduleEvent(currentCommitment) },
-                        onKeep = { eventToReflect = currentCommitment } // Trigger reflection
+            LazyColumn(
+                modifier = Modifier.weight(1f),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 100.dp) // space for FAB
+            ) {
+                // Stats Header
+                item {
+                    StatsHeader(
+                        completedCount = completedEvents.count { 
+                            val dt = Instant.ofEpochMilli(it.completedAt ?: 0).atZone(zoneId).toLocalDate()
+                            dt.isAfter(todayDate.minusDays(7)) 
+                        },
+                        totalGoal = 10, // Mock goal
+                        streak = streak
                     )
                 }
-            } else {
-                 Text(
-                     text = "No commitments for today.",
-                     style = CommitTypography.CardSubtitle.copy(color = CommitColors.InkSoft),
-                     modifier = Modifier.padding(vertical = 24.dp)
-                 )
-            }
-        }
 
-        if (laterEvents.isNotEmpty()) {
-            item {
-                SectionLabel(text = "Later")
-                Column {
-                    laterEvents.forEach { event ->
-                        UpcomingItem(event = event)
+                // Today Section
+                item {
+                    SectionLabel("Today, ${todayDate.format(DateTimeFormatter.ofPattern("MMM d"))}")
+                }
+                
+                if (overdueEvents.isNotEmpty()) {
+                    items(overdueEvents) { event ->
+                         OverdueCard(event, onReschedule = { onRescheduleEvent(event) }, onMarkDone = { onMarkDoneEvent(event) })
+                         Spacer(modifier = Modifier.height(16.dp))
                     }
                 }
-            }
-        }
 
-        if (completedEvents.isNotEmpty()) {
-            item {
-                SectionLabel(text = "Log")
-                Column(
-                    modifier = Modifier.alpha(0.5f),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    completedEvents.take(5).forEach { event -> 
-                        CompletedItem(event = event)
+                if (actualTodayEvents.isNotEmpty()) {
+                     val dueNow = actualTodayEvents.firstOrNull() // Simplify: First is hero
+                     val others = actualTodayEvents.drop(1)
+                     
+                     if (dueNow != null) {
+                         item {
+                             HeroCard(dueNow, onMarkDone = { onMarkDoneEvent(dueNow) })
+                             Spacer(modifier = Modifier.height(16.dp))
+                         }
+                     }
+                     
+                     items(others) { event ->
+                         ScheduledCard(event)
+                         Spacer(modifier = Modifier.height(12.dp))
+                     }
+                } else if (overdueEvents.isEmpty()) {
+                    item {
+                        Text(
+                            "No commitments left for today.", 
+                            style = CommitTypography.CardSubtitle.copy(color = CommitColors.InkSoft),
+                            modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
+                        )
+                    }
+                }
+                
+                // Upcoming Section
+                if (futureEvents.isNotEmpty()) {
+                    item {
+                        Spacer(modifier = Modifier.height(32.dp))
+                        SectionLabel("Upcoming")
+                    }
+                    items(futureEvents) { event ->
+                        UpcomingTimelineItem(event)
                     }
                 }
             }
         }
         
-        item {
-            Spacer(modifier = Modifier.height(24.dp))
+        // FAB
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 32.dp)
+        ) {
+            FloatingNewButton(onClick = { /* TODO: Open Share/Add */ })
         }
     }
 }
 
 @Composable
-private fun HeaderSection(
-    remainingCount: Int = 0,
-    streak: Int = 0
-) {
-    val today = LocalDate.now()
-    val now = LocalTime.now()
-    val dateStr = today.format(DateTimeFormatter.ofPattern("EEEE, MMM d"))
-    
-    val greeting = remember(now, remainingCount) {
-        val hour = now.hour
-        when {
-            hour < 12 -> "Good morning.\nHere's what you committed to today."
-            hour < 17 -> if (remainingCount > 0) "Good afternoon.\n$remainingCount commitments left for today." else "Good afternoon.\nYou've kept your commitments."
-            else -> if (remainingCount > 0) "Good evening.\nFinish your day strong." else "Good evening.\nYou kept your commitments today."
-        }
-    }
-
-    Column {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 24.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Top
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Row(
-                   modifier = Modifier.fillMaxWidth(),
-                   horizontalArrangement = Arrangement.SpaceBetween,
-                   verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = dateStr.uppercase(),
-                        style = CommitTypography.Date
-                    )
-                    if (streak > 0) {
-                        Text(
-                            text = "$streak DAY STREAK",
-                            style = CommitTypography.Label.copy(color = CommitColors.Rust)
-                        )
+private fun StatsHeader(completedCount: Int, totalGoal: Int, streak: Int) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp)
+            .padding(bottom = 32.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.Top
+    ) {
+        Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
+            Text(
+                buildAnnotatedString {
+                    append("You kept ")
+                    withStyle(SpanStyle(fontStyle = FontStyle.Italic, textDecoration = TextDecoration.Underline)) {
+                        append("$completedCount of $totalGoal")
                     }
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
+                    append("\ncommitments this week.")
+                },
+                style = CommitTypography.DisplayLarge.copy(fontSize = 28.sp, lineHeight = 32.sp)
+            )
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                // Bolt Icon placeholder
+                Text("⚡", fontSize = 12.sp)
                 Text(
-                    text = greeting,
-                    style = CommitTypography.Brand.copy(
-                        fontStyle = androidx.compose.ui.text.font.FontStyle.Normal,
-                        fontSize = 20.sp, 
-                        lineHeight = 28.sp
-                    )
+                    "Current Streak: $streak Days", 
+                    style = CommitTypography.Label.copy(color = CommitColors.InkSoft)
                 )
             }
         }
-        HorizontalDivider(color = CommitColors.Line, thickness = 1.dp)
+        
+        // Stat Ring
+        StatRing(percentage = (completedCount.toFloat() / totalGoal.toFloat()).coerceIn(0f, 1f))
     }
 }
 
 @Composable
-private fun SectionLabel(text: String) {
-    Text(
-        text = text.uppercase(),
-        style = CommitTypography.Label,
-        modifier = Modifier.padding(bottom = 12.dp)
-    )
-}
-
-@Composable
-private fun StackHint() {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(300.dp) // Height of card roughly
-            .padding(horizontal = 12.dp) // Indented
-            .offset(y = 10.dp) // Pushed down to peek out
-            .alpha(0.1f)
-            .background(CommitColors.Ink) // Shadow/Stack color
-            .zIndex(-1f) // Ensure behind if in same container scope
-    )
-}
-
-@Composable
-private fun UpcomingItem(event: SavedEvent) {
-    val dateTime = Instant.ofEpochMilli(event.scheduledDateTime)
-        .atZone(ZoneId.systemDefault())
-        .toLocalDateTime()
-    val timeStr = dateTime.format(DateTimeFormatter.ofPattern("HH:mm"))
-    
-    Column {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 20.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = timeStr,
-                style = CommitTypography.MonoTime,
-                color = CommitColors.InkSoft,
-                modifier = Modifier.width(60.dp)
+private fun StatRing(percentage: Float) {
+    Box(contentAlignment = Alignment.Center, modifier = Modifier.size(56.dp)) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            // Track
+            drawArc(
+                color = CommitColors.Line,
+                startAngle = 0f,
+                sweepAngle = 360f,
+                useCenter = false,
+                style = Stroke(width = 1.5.dp.toPx())
             )
-            Text(
-                text = event.title,
-                style = CommitTypography.TaskName
+            // Progress
+            drawArc(
+                color = CommitColors.Ink,
+                startAngle = -90f,
+                sweepAngle = 360f * percentage,
+                useCenter = false,
+                style = Stroke(width = 1.5.dp.toPx(), cap = StrokeCap.Round)
             )
-        }
-        HorizontalDivider(color = CommitColors.Line, thickness = 1.dp)
-    }
-}
-
-@Composable
-private fun CompletedItem(event: SavedEvent) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .width(16.dp)
-                .height(16.dp)
-                .background(ColorFilter.tint(CommitColors.Rust).let { androidx.compose.ui.graphics.Color.Transparent }, androidx.compose.foundation.shape.CircleShape) 
-                .run { 
-                     // Simple checkmark visual
-                     this 
-                },
-             contentAlignment = Alignment.Center
-        ) {
-             Text(text = "✓", color = CommitColors.Rust, style = CommitTypography.MonoTime.copy(fontSize = 12.sp))
         }
         Text(
-            text = event.title,
-            style = CommitTypography.TaskName.copy(
-                fontSize = 14.sp,
-                color = CommitColors.InkSoft,
-                textDecoration = TextDecoration.LineThrough
-            )
+            text = "${(percentage * 100).toInt()}%",
+            style = CommitTypography.Label.copy(fontSize = 10.sp)
         )
     }
 }
 
 @Composable
-private fun LoadingScreen(modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier,
-        contentAlignment = Alignment.Center
-    ) {
-        Text("Loading...", style = CommitTypography.Label)
+private fun SectionLabel(title: String) {
+    Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)) {
+        Text(
+            title.uppercase(),
+            style = CommitTypography.Label.copy(color = CommitColors.InkSoft),
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+        HorizontalDivider(color = CommitColors.Line.copy(alpha = 0.5f))
+        Spacer(modifier = Modifier.height(16.dp))
     }
 }
 
+@Composable
+private fun OverdueCard(event: SavedEvent, onReschedule: () -> Unit, onMarkDone: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp)
+            .background(CommitColors.Cream) // Slight contrast
+            .border(1.dp, CommitColors.Line)
+    ) {
+        // Left Rust Border
+        Box(
+            modifier = Modifier
+                .width(4.dp)
+                .matchParentSize()
+                .background(CommitColors.Rust)
+                .align(Alignment.CenterStart)
+        )
+        
+        Column(modifier = Modifier.padding(20.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Box(modifier = Modifier.size(6.dp).background(CommitColors.Rust, CircleShape))
+                    Text("OVERDUE", style = CommitTypography.Label.copy(color = CommitColors.Rust))
+                }
+                Text(
+                    "Reschedule", 
+                    style = CommitTypography.Label.copy(color = CommitColors.InkSoft),
+                    modifier = Modifier.clickable { onReschedule() }
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(event.title, style = CommitTypography.CardTitle.copy(color = CommitColors.Ink, fontSize = 22.sp))
+            // Spacer(modifier = Modifier.height(4.dp))
+            // Text("Description placeholder", style = CommitTypography.CardSubtitle.copy(color = CommitColors.InkSoft, fontSize = 15.sp))
+            
+            Spacer(modifier = Modifier.height(20.dp))
+            HorizontalDivider(color = CommitColors.Line.copy(alpha = 0.3f))
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                val date = Instant.ofEpochMilli(event.scheduledDateTime).atZone(ZoneId.systemDefault())
+                Text(
+                    if (date.toLocalDate() == LocalDate.now().minusDays(1)) "YESTERDAY" else date.format(DateTimeFormatter.ofPattern("MMM d")).uppercase(),
+                    style = CommitTypography.Label.copy(color = CommitColors.Rust)
+                )
+                
+                Box(
+                    modifier = Modifier
+                        .border(1.dp, CommitColors.Ink)
+                        .clickable { onMarkDone() }
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    Text("MARK KEPT", style = CommitTypography.Label.copy(color = CommitColors.Ink))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun HeroCard(event: SavedEvent, onMarkDone: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp)
+            .background(androidx.compose.ui.graphics.Color.White)
+            .border(1.dp, CommitColors.Line.copy(alpha = 0.5f))
+    ) {
+        Row(modifier = Modifier.height(180.dp)) {
+            // Image Placeholder (Left)
+            Box(
+                modifier = Modifier
+                    .width(100.dp)
+                    .fillMaxSize()
+                    .background(CommitColors.Paper)
+            ) {
+                // Placeholder pattern or gray
+                Image(
+                    bitmap = rememberNoiseTexture(), // Just reusing noise for now
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize().alpha(0.5f)
+                )
+            }
+            
+            // Content
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(20.dp)
+            ) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "DUE NOW", 
+                        style = CommitTypography.Label.copy(color = androidx.compose.ui.graphics.Color.White),
+                        modifier = Modifier.background(CommitColors.Ink).padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    event.title, 
+                    style = CommitTypography.DisplayLarge.copy(fontSize = 24.sp, lineHeight = 26.sp),
+                    maxLines = 3
+                )
+                
+                Spacer(modifier = Modifier.weight(1f))
+                
+                // Action
+                MetroButton(
+                    text = "READ & KEEP",
+                    onClick = onMarkDone,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ScheduledCard(event: SavedEvent) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp)
+            .background(androidx.compose.ui.graphics.Color.White.copy(alpha = 0.5f))
+            .border(1.dp, CommitColors.Line, shape = androidx.compose.foundation.shape.GenericShape { size, _ -> 
+                // Dashed border simulator if possible, or just solid for now
+                moveTo(0f, 0f); lineTo(size.width, 0f); lineTo(size.width, size.height); lineTo(0f, size.height); close()
+            }) // Simplified to solid for Compose without custom dash path effect easily inline
+            .padding(20.dp)
+    ) {
+         val time = Instant.ofEpochMilli(event.scheduledDateTime).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("h:mm a"))
+         Text(time, style = CommitTypography.Label.copy(color = CommitColors.InkSoft))
+         Spacer(modifier = Modifier.height(8.dp))
+         Text(event.title, style = CommitTypography.CardTitle.copy(color = CommitColors.Ink, fontSize = 20.sp))
+    }
+}
+
+@Composable
+private fun UpcomingTimelineItem(event: SavedEvent) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp)
+            .padding(start = 8.dp) // shift for timeline
+    ) {
+        // Timeline Line
+        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(20.dp)) {
+             Box(
+                 modifier = Modifier
+                     .size(11.dp)
+                     .background(CommitColors.Paper)
+                     .border(1.dp, CommitColors.Line, CircleShape)
+             )
+             Box(
+                 modifier = Modifier
+                     .width(1.dp)
+                     .height(60.dp) // min height
+                     .background(CommitColors.Line)
+             )
+        }
+        
+        Spacer(modifier = Modifier.width(16.dp))
+        
+        Column(modifier = Modifier.padding(top = -4.dp, bottom = 24.dp)) {
+            val date = Instant.ofEpochMilli(event.scheduledDateTime).atZone(ZoneId.systemDefault())
+            Text(
+                date.format(DateTimeFormatter.ofPattern("EEEE")).uppercase(),
+                style = CommitTypography.Label.copy(color = CommitColors.InkSoft)
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                event.title,
+                style = CommitTypography.CardTitle.copy(color = CommitColors.Ink, fontSize = 18.sp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun FloatingNewButton(onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(50))
+            .background(androidx.compose.ui.graphics.Color(0xCCFFFFFF)) // Blurred glass sim
+            .border(1.dp, androidx.compose.ui.graphics.Color(0x1A000000), RoundedCornerShape(50))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 32.dp, vertical = 16.dp)
+    ) {
+        Text(
+            "+ new commitment",
+            style = CommitTypography.Brand.copy(
+                fontSize = 20.sp,
+                fontStyle = FontStyle.Italic
+            )
+        )
+    }
+}
+
+
+
+
+// --- KEEPING NOT AUTHENTICATED SCREEN AS IS ---
 @Composable
 private fun NotAuthenticatedScreen(
     onConnectClick: () -> Unit,
@@ -501,7 +695,15 @@ private fun NotAuthenticatedScreen(
         }
     }
 }
-
+@Composable
+private fun LoadingScreen(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier,
+        contentAlignment = Alignment.Center
+    ) {
+        Text("Loading...", style = CommitTypography.Label)
+    }
+}
 
 @Composable
 private fun ErrorScreen(
