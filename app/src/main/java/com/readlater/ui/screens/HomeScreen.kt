@@ -12,6 +12,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -171,6 +172,22 @@ private fun DashboardScreen(
     }
 
     val streak = remember(completedEvents) { calculateStreak(completedEvents) }
+
+    // Toast State
+    var showCompleteMessage by remember { mutableStateOf(false) }
+    
+    // Auto-hide toast
+    androidx.compose.runtime.LaunchedEffect(showCompleteMessage) {
+        if (showCompleteMessage) {
+            kotlinx.coroutines.delay(3000)
+            showCompleteMessage = false
+        }
+    }
+
+    val handleMarkDone = { event: SavedEvent ->
+        showCompleteMessage = true
+        onMarkDoneEvent(event)
+    }
     
     Box(modifier = modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -195,13 +212,13 @@ private fun DashboardScreen(
                 // Overdue Section
                 if (overdueEvents.isNotEmpty()) {
                     items(overdueEvents) { event ->
-                        OverdueCard(event, onReschedule = { onRescheduleEvent(event) }, onComplete = { onMarkDoneEvent(event) })
+                        OverdueCard(event, onReschedule = { onRescheduleEvent(event) }, onComplete = { handleMarkDone(event) })
                     }
                 }
 
                 // Today's Focus
                 item {
-                    TodaysFocusSection(todayEvents, onMarkDoneEvent)
+                    TodaysFocusSection(todayEvents, handleMarkDone)
                 }
 
                 // Looking Ahead
@@ -236,6 +253,32 @@ private fun DashboardScreen(
             modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp),
             onNewClick = { /* TODO */ }
         )
+
+        // React 4 Toast
+        androidx.compose.animation.AnimatedVisibility(
+            visible = showCompleteMessage,
+            enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.slideInVertically(),
+            exit = androidx.compose.animation.fadeOut(),
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = 96.dp).zIndex(10f)
+        ) {
+            Box(
+                modifier = Modifier
+                    .background(CommitColors.DarkCard, CircleShape)
+                    .padding(horizontal = 24.dp, vertical = 12.dp)
+                    .shadow(8.dp, CircleShape)
+            ) {
+                Text(
+                    "✓ Task completed!",
+                    style = CommitTypography.Label.copy(
+                        color = androidx.compose.ui.graphics.Color.White,
+                        fontSize = 12.sp,
+                        letterSpacing = 0.05.em
+                    )
+                )
+            }
+        }
+        
+
     }
 }
 
