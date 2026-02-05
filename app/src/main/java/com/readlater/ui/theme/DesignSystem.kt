@@ -14,6 +14,8 @@ object CommitColors {
     val InkSoft = Color(0xFF5C5854)
     val Cream = Color(0xFFF2F0EB)
     val Line = Color(0xFFBDB9B5)
+    val RedAccent = Color(0xFF8B3A3A) // From React 4
+    val DarkCard = Color(0xFF1A1A1A) // From React 4
 }
 
 object CommitTypography {
