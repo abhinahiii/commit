@@ -6,6 +6,18 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.em
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.unit.dp
+
+fun Modifier.premiumShadow(shape: Shape = RectangleShape): Modifier = this.shadow(
+    elevation = 20.dp,
+    shape = shape,
+    spotColor = CommitColors.Ink.copy(alpha = 0.15f),
+    ambientColor = CommitColors.Ink.copy(alpha = 0.10f)
+)
 
 object CommitColors {
     val Paper = Color(0xFFDCD9D5)
@@ -16,6 +28,12 @@ object CommitColors {
     val Line = Color(0xFFBDB9B5)
     val RedAccent = Color(0xFF8B3A3A) // From React 4
     val DarkCard = Color(0xFF1A1A1A) // From React 4
+    val Surface = Color.White
+    val SurfaceSubtle = Color(0xFFFCFBF9)
+}
+
+object CommitBorders {
+    val Hairline = 0.5.dp
 }
 
 object CommitTypography {
@@ -28,6 +46,15 @@ object CommitTypography {
         fontWeight = FontWeight.Normal,
         fontSize = 32.sp,
         lineHeight = 38.sp,
+        color = CommitColors.Ink
+    )
+
+    val DisplayHuge = TextStyle(
+        fontFamily = Serif,
+        fontWeight = FontWeight.Normal,
+        fontSize = 36.sp,
+        lineHeight = 42.sp,
+        letterSpacing = (-0.06).em, // Tighter for 36sp
         color = CommitColors.Ink
     )
 

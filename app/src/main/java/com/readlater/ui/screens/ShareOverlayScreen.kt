@@ -266,42 +266,43 @@ private fun LinkPreviewBlock(title: String, url: String) {
             .fillMaxWidth()
             .border(1.dp, CommitColors.Line)
             .background(Color(0x66F2F0EB)) // Transparent Cream
-            .padding(12.dp),
+            .padding(16.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Thumbnail Placeholder
-        Box(
-            modifier = Modifier
-                .size(64.dp)
-                .background(Color.Gray)
-        ) {
-            // In real app, Load image. For now, gray box.
-        }
-        
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            // Meta Row
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Box(
                     modifier = Modifier
                         .border(1.dp, CommitColors.Rust)
-                        .padding(horizontal = 4.dp, vertical = 0.dp)
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
                 ) {
+                    val type = if (url.contains("youtube") || url.contains("youtu.be")) "VIDEO" else "ARTICLE"
                     Text(
-                        "VIDEO", 
+                        type, 
                         style = CommitTypography.Label.copy(fontSize = 9.sp, color = CommitColors.Rust)
                     )
                 }
+                
+                val domain = try {
+                    java.net.URI(url).host?.removePrefix("www.") ?: url
+                } catch (e: Exception) {
+                   if (url.length > 20) url.take(20) + "..." else url
+                }
                 Text(
-                   text = "youtube.com", // Mock domain from URL logic
-                   style = CommitTypography.Label.copy(fontSize = 10.sp),
+                   text = domain, 
+                   style = CommitTypography.Label.copy(fontSize = 10.sp, color = CommitColors.InkSoft),
                    maxLines = 1
                 )
             }
+            
+            // Title
             Text(
-                text = if (title.isBlank()) "Untitled" else title,
+                text = if (title.isBlank()) "Untitled Object" else title,
                 style = CommitTypography.CardTitle.copy(
                     color = CommitColors.Ink, 
-                    fontSize = 15.sp, 
-                    lineHeight = 18.sp
+                    fontSize = 16.sp, 
+                    lineHeight = 20.sp
                 ),
                 maxLines = 2
             )
