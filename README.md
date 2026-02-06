@@ -4,7 +4,7 @@
 
 We save countless articles, videos, and threads, promising ourselves we'll get to them "later." But later rarely comes. The backlog grows, and so does the guilt.
 
-**Commit** is different. It’s not a bookmark manager—it’s an action scheduler. When you share content to Commit, you don't just save it; you promise a time to engage with it.
+**Commit** is different. It’s not a bookmark manager - it’s an action scheduler. When you share content to Commit, you don't just save it; you promise a time to engage with it.
 
 ---
 
