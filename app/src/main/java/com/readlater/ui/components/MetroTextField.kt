@@ -12,49 +12,47 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.unit.dp
-import com.readlater.ui.theme.DarkThemeColors
+import com.readlater.ui.theme.CommitColors
 
 @Composable
 fun MetroTextField(
-    value: String,
-    onValueChange: (String) -> Unit,
-    label: String,
-    modifier: Modifier = Modifier,
-    placeholder: String = "",
-    singleLine: Boolean = true
+        value: String,
+        onValueChange: (String) -> Unit,
+        label: String,
+        modifier: Modifier = Modifier,
+        placeholder: String = "",
+        singleLine: Boolean = true
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = DarkThemeColors.TextSecondary,
-            modifier = Modifier.padding(bottom = 8.dp)
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = CommitColors.InkSoft,
+                modifier = Modifier.padding(bottom = 8.dp)
         )
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .border(1.dp, DarkThemeColors.Border)
-                .padding(horizontal = 16.dp, vertical = 14.dp)
+                modifier =
+                        Modifier.fillMaxWidth()
+                                .border(1.dp, CommitColors.Line)
+                                .padding(horizontal = 16.dp, vertical = 14.dp)
         ) {
             BasicTextField(
-                value = value,
-                onValueChange = onValueChange,
-                modifier = Modifier.fillMaxWidth(),
-                textStyle = MaterialTheme.typography.bodyMedium.copy(
-                    color = DarkThemeColors.TextPrimary
-                ),
-                singleLine = singleLine,
-                cursorBrush = SolidColor(DarkThemeColors.TextPrimary),
-                decorationBox = { innerTextField ->
-                    if (value.isBlank() && placeholder.isNotEmpty()) {
-                        Text(
-                            text = placeholder,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = DarkThemeColors.TextSecondary
-                        )
+                    value = value,
+                    onValueChange = onValueChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    textStyle = MaterialTheme.typography.bodyMedium.copy(color = CommitColors.Ink),
+                    singleLine = singleLine,
+                    cursorBrush = SolidColor(CommitColors.Ink),
+                    decorationBox = { innerTextField ->
+                        if (value.isBlank() && placeholder.isNotEmpty()) {
+                            Text(
+                                    text = placeholder,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = CommitColors.InkSoft
+                            )
+                        }
+                        innerTextField()
                     }
-                    innerTextField()
-                }
             )
         }
     }
@@ -62,9 +60,9 @@ fun MetroTextField(
 
 @Composable
 fun BrutalistTextField(
-    value: String,
-    onValueChange: (String) -> Unit,
-    label: String,
-    modifier: Modifier = Modifier,
-    singleLine: Boolean = true
+        value: String,
+        onValueChange: (String) -> Unit,
+        label: String,
+        modifier: Modifier = Modifier,
+        singleLine: Boolean = true
 ) = MetroTextField(value, onValueChange, label, modifier, "", singleLine)
