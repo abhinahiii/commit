@@ -622,7 +622,7 @@ private fun NotAuthenticatedScreen(onConnectClick: () -> Unit, modifier: Modifie
                                         .asImageBitmap()
                         }
                 androidx.compose.foundation.Canvas(
-                        modifier = Modifier.size(120.dp).padding(bottom = 24.dp)
+                        modifier = Modifier.size(180.dp).padding(bottom = 24.dp)
                 ) {
                         drawImage(
                                 image = imageBitmap,

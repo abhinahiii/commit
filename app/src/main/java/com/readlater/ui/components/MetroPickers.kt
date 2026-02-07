@@ -92,8 +92,8 @@ fun MetroDateTimePicker(
         val isTimeInPast = selectedDate == deviceDate && selectedTime.isBefore(deviceTime)
 
         Text(
-                text = "date",
-                style = MaterialTheme.typography.labelSmall,
+                text = "DATE",
+                style = CommitTypography.Label,
                 color = CommitColors.InkSoft,
                 modifier = Modifier.padding(bottom = 8.dp)
         )
@@ -101,24 +101,29 @@ fun MetroDateTimePicker(
         Box(
                 modifier =
                         Modifier.fillMaxWidth()
-                                .border(1.dp, CommitColors.Line)
+                                .border(
+                                        1.dp,
+                                        CommitColors.Line
+                                ) // Date is always "custom" conceptually here, but let's keep it
+                                // simple line
                                 .clickable { showDatePicker = true }
-                                .padding(16.dp)
+                                .padding(vertical = 12.dp),
+                contentAlignment = Alignment.Center
         ) {
             Text(
                     text = formatDateLabel(selectedDate),
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = CommitTypography.MonoTime.copy(fontSize = 13.sp),
                     color = CommitColors.Ink
             )
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
         Text(
-                text = "start time",
-                style = MaterialTheme.typography.labelSmall,
+                text = "START TIME",
+                style = CommitTypography.Label,
                 color = CommitColors.InkSoft,
-                modifier = Modifier.padding(bottom = 8.dp)
+                modifier = Modifier.padding(bottom = 12.dp)
         )
 
         data class TimeOption(val label: String, val minutesFromNow: Int)
@@ -154,9 +159,13 @@ fun MetroDateTimePicker(
                 val isSelected = isQuickTimeOption(option)
                 Box(
                         modifier =
-                                Modifier.border(1.dp, CommitColors.Line)
+                                Modifier.border(
+                                                1.dp,
+                                                if (isSelected) CommitColors.Rust
+                                                else CommitColors.Line
+                                        )
                                         .background(
-                                                if (isSelected) CommitColors.Ink
+                                                if (isSelected) CommitColors.Rust
                                                 else Color.Transparent
                                         )
                                         .clickable {
@@ -170,12 +179,12 @@ fun MetroDateTimePicker(
                                             }
                                             onDateTimeSelected(newDate, newTime)
                                         }
-                                        .padding(horizontal = 12.dp, vertical = 10.dp)
+                                        .padding(horizontal = 12.dp, vertical = 12.dp)
                 ) {
                     Text(
                             text = option.label,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = if (isSelected) CommitColors.Paper else CommitColors.Ink
+                            style = CommitTypography.MonoTime.copy(fontSize = 12.sp),
+                            color = if (isSelected) CommitColors.Cream else CommitColors.InkSoft
                     )
                 }
             }
@@ -186,11 +195,13 @@ fun MetroDateTimePicker(
             val customBorderColor =
                     if (isTimeInPast && isCustomTime) {
                         CommitColors.RedAccent
+                    } else if (isCustomTime) {
+                        CommitColors.Rust
                     } else {
                         CommitColors.Line
                     }
-            val customBackground = if (isCustomTime) CommitColors.Ink else Color.Transparent
-            val customContentColor = if (isCustomTime) CommitColors.Paper else CommitColors.Ink
+            val customBackground = if (isCustomTime) CommitColors.Rust else Color.Transparent
+            val customContentColor = if (isCustomTime) CommitColors.Cream else CommitColors.InkSoft
 
             Box(
                     modifier =
@@ -202,7 +213,7 @@ fun MetroDateTimePicker(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                             text = customLabel,
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = CommitTypography.MonoTime.copy(fontSize = 12.sp),
                             color =
                                     if (isTimeInPast && isCustomTime) CommitColors.RedAccent
                                     else customContentColor
