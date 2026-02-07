@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "ReadLater"
+rootProject.name = "commit-android"
 include(":app")

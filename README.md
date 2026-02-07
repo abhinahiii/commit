@@ -1,6 +1,6 @@
 <div align="center">
   <img src="docs/icon.png" width="128" alt="Commit App Icon" />
-  <h1>Commit</h1>
+  <h1>Commit - Android</h1>
 </div>
 
 > **Bookmarks are intentions. Commitments are actions.**
@@ -12,13 +12,17 @@ We save countless articles, videos, and threads, promising ourselves we'll get t
 ---
 
 <div align="center">
-  <img src="docs/hero.png" width="800" alt="Commit App Hero" />
+  <img src="docs/hero.png" width="300" alt="Commit App Hero" />
 </div>
 
 ## Features
 
 ### 📅 Intentional Scheduling
 Share any link from any app directly to Commit. Instead of a "Save" button, you get a "Commit" prompt. Choose **Tomorrow Morning**, **This Weekend**, or a specific time slot. It syncs instantly to your Google Calendar.
+
+<div align="center">
+  <img src="docs/share_overlay.png" width="300" alt="Share Overlay" />
+</div>
 
 ### 🎨 Premium "Paper" Design
 A visual departure from standard apps. Commit features a tactile **Paper** aesthetic with noise textures, diffused shadows, and editorial serif typography. It feels grounded, calm, and indistinguishable from a printed agenda.
