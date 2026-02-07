@@ -3,6 +3,7 @@ package com.readlater.ui.screens
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
+import kotlinx.coroutines.launch
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
@@ -140,6 +141,7 @@ fun HomeScreen(
     }
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun DashboardScreen(
     upcomingEvents: List<SavedEvent>,
@@ -149,19 +151,12 @@ private fun DashboardScreen(
     onUndoCompleteEvent: (SavedEvent) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // Filter Logic
-    var selectedTab by remember { mutableStateOf(0) } // 0 = Upcoming, 1 = Completed
+    val pagerState = androidx.compose.foundation.pager.rememberPagerState(pageCount = { 2 })
+    val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
 
-    val displayedEvents = remember(selectedTab, upcomingEvents, completedEvents) {
-        if (selectedTab == 0) {
-            // Upcoming: sorted by time
-            upcomingEvents.sortedBy { it.scheduledDateTime }
-        } else {
-            // Completed: Sorted by completed time desc
-            completedEvents.sortedByDescending { it.completedAt }
-        }
-    }
-
+    // Sync tab selection with pager
+    val selectedTab = pagerState.currentPage
+    
     // Toast State
     var showCompleteMessage by remember { mutableStateOf(false) }
     
@@ -199,7 +194,7 @@ private fun DashboardScreen(
 
             // Tabs
             Row(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp).border(width = 0.dp, color = androidx.compose.ui.graphics.Color.Transparent).drawBehind {
+                modifier = Modifier.fillMaxWidth().padding(bottom = 0.dp).drawBehind {
                      drawLine(
                          CommitColors.Line,
                          Offset(0f, size.height),
@@ -208,37 +203,53 @@ private fun DashboardScreen(
                      )
                 },
                 horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.Bottom
             ) {
-                TabItem("UPCOMING", selectedTab == 0) { selectedTab = 0 }
+                TabItem("UPCOMING", selectedTab == 0) { 
+                    coroutineScope.launch { pagerState.animateScrollToPage(0) }
+                }
                 Spacer(modifier = Modifier.width(32.dp))
-                TabItem("COMPLETED", selectedTab == 1) { selectedTab = 1 }
+                TabItem("COMPLETED", selectedTab == 1) { 
+                    coroutineScope.launch { pagerState.animateScrollToPage(1) }
+                }
             }
+            
+            Spacer(modifier = Modifier.height(32.dp))
 
-            // Clean List
-            LazyColumn(
-                modifier = Modifier.weight(1f),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 120.dp)
-            ) {
-                items(displayedEvents) { event ->
-                    EventListItem(
-                        event = event,
-                        isCompleted = selectedTab == 1,
-                        onMarkDone = { handleMarkDone(event) },
-                        onReschedule = { onRescheduleEvent(event) },
-                        onUndo = { onUndoCompleteEvent(event) }
-                    )
+            // Swipeable Content
+            androidx.compose.foundation.pager.HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.weight(1f)
+            ) { page ->
+                val events = if (page == 0) {
+                     upcomingEvents.sortedBy { it.scheduledDateTime }
+                } else {
+                     completedEvents.sortedByDescending { it.completedAt }
                 }
                 
-                // Empty State
-                if (displayedEvents.isEmpty()) {
-                    item {
-                         Box(modifier = Modifier.fillMaxWidth().padding(48.dp), contentAlignment = Alignment.Center) {
-                             Text(
-                                 if (selectedTab == 0) "No upcoming commitments." else "No completed commitments yet.",
-                                 style = CommitTypography.CardSubtitle.copy(color = CommitColors.InkSoft, fontStyle = FontStyle.Italic)
-                             )
-                         }
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 120.dp)
+                ) {
+                    items(events) { event ->
+                        EventListItem(
+                            event = event,
+                            isCompleted = page == 1,
+                            onMarkDone = { handleMarkDone(event) },
+                            onReschedule = { onRescheduleEvent(event) },
+                            onUndo = { onUndoCompleteEvent(event) }
+                        )
+                    }
+                    
+                    if (events.isEmpty()) {
+                        item {
+                             Box(modifier = Modifier.fillMaxWidth().padding(48.dp), contentAlignment = Alignment.Center) {
+                                 Text(
+                                     if (page == 0) "No upcoming commitments." else "No completed commitments yet.",
+                                     style = CommitTypography.CardSubtitle.copy(color = CommitColors.InkSoft, fontStyle = FontStyle.Italic)
+                                 )
+                             }
+                        }
                     }
                 }
             }
@@ -272,22 +283,32 @@ private fun DashboardScreen(
 
 @Composable
 private fun TabItem(text: String, isActive: Boolean, onClick: () -> Unit) {
-    Column(
-        modifier = Modifier.clickable { onClick() }.padding(bottom = 12.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+    // Fixed height box to prevent jumping
+    Box(
+        modifier = Modifier
+            .clickable { onClick() }
+            .height(34.dp), 
+        contentAlignment = Alignment.TopCenter
     ) {
-        Text(
-            text,
-            style = CommitTypography.Label.copy(
-                fontSize = 13.sp,
-                letterSpacing = 1.2.sp,
-                color = if (isActive) CommitColors.Ink else CommitColors.InkSoft,
-                fontWeight = if (isActive) FontWeight.Medium else FontWeight.Normal
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier.fillMaxSize()
+        ) {
+            Text(
+                text,
+                style = CommitTypography.Label.copy(
+                    fontSize = 13.sp,
+                    letterSpacing = 1.2.sp,
+                    color = if (isActive) CommitColors.Ink else CommitColors.InkSoft,
+                    fontWeight = if (isActive) FontWeight.Medium else FontWeight.Normal
+                )
             )
-        )
-        if (isActive) {
-            Spacer(modifier = Modifier.height(8.dp))
-            Box(modifier = Modifier.width(24.dp).height(2.dp).background(CommitColors.RedAccent))
+            if (isActive) {
+                Box(modifier = Modifier.width(24.dp).height(2.dp).background(CommitColors.RedAccent))
+            } else {
+                 Spacer(modifier = Modifier.height(2.dp))
+            }
         }
     }
 }
@@ -464,130 +485,91 @@ private fun NotAuthenticatedScreen(
     onConnectClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // Animation States
-    var showBrand by remember { mutableStateOf(false) }
-    var showDivider by remember { mutableStateOf(false) }
-    var showHeadline by remember { mutableStateOf(false) }
-    var showSubtext by remember { mutableStateOf(false) }
-    var showButtons by remember { mutableStateOf(false) }
-
-    androidx.compose.runtime.LaunchedEffect(Unit) {
-        kotlinx.coroutines.delay(100)
-        showBrand = true
-        kotlinx.coroutines.delay(200)
-        showDivider = true
-        kotlinx.coroutines.delay(100)
-        showHeadline = true
-        kotlinx.coroutines.delay(200)
-        showSubtext = true
-        kotlinx.coroutines.delay(200)
-        showButtons = true
-    }
-
     Column(
         modifier = modifier
             .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // Brand
-        androidx.compose.animation.AnimatedVisibility(
-            visible = showBrand,
-            enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.slideInVertically { 20 }
-        ) {
-            Text(
-                "Commit.", 
-                style = CommitTypography.Brand.copy(
-                    fontSize = 36.sp, 
-                    color = CommitColors.Ink,
-                    letterSpacing = (-0.02).sp
-                )
-            )
-        }
+        // Brand & Icon
+        Image(
+            painter = androidx.compose.ui.res.painterResource(id = com.readlater.R.drawable.app_icon_c),
+            contentDescription = null,
+            modifier = Modifier.size(120.dp).padding(bottom = 24.dp)
+        )
 
-        Spacer(modifier = Modifier.height(64.dp))
+        Text(
+            "Commit.", 
+            style = CommitTypography.Brand.copy(
+                fontSize = 36.sp, 
+                color = CommitColors.Ink,
+                letterSpacing = (-0.02).sp
+            )
+        )
+
+        Spacer(modifier = Modifier.height(48.dp))
 
         // Vertical Divider
-        androidx.compose.animation.AnimatedVisibility(
-            visible = showDivider,
-            enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.expandVertically()
-        ) {
-             Box(
-                 modifier = Modifier
-                     .width(1.dp)
-                     .height(40.dp)
-                     .background(CommitColors.Line)
-             )
-        }
+         Box(
+             modifier = Modifier
+                 .width(1.dp)
+                 .height(40.dp)
+                 .background(CommitColors.Line)
+         )
         
         Spacer(modifier = Modifier.height(32.dp))
         
         // Headline
-        androidx.compose.animation.AnimatedVisibility(
-            visible = showHeadline,
-            enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.slideInVertically { 20 }
-        ) {
-            Text(
-                text = "Bookmarks are intentions.\nCommitments are actions.",
-                style = androidx.compose.ui.text.TextStyle(
-                    fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.Light, // 400
-                    fontSize = 26.sp,
-                    lineHeight = 32.sp,
-                    color = CommitColors.Ink,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                )
+        Text(
+            text = "Bookmarks are intentions.\nCommitments are actions.",
+            style = androidx.compose.ui.text.TextStyle(
+                fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Light, // 400
+                fontSize = 26.sp,
+                lineHeight = 32.sp,
+                color = CommitColors.Ink,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
-        }
+        )
         
         Spacer(modifier = Modifier.height(24.dp))
         
         // Subtext
-        androidx.compose.animation.AnimatedVisibility(
-            visible = showSubtext,
-            enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.slideInVertically { 20 }
-        ) {
-             Text(
-                text = "Stop saving. Start scheduling.",
-                style = CommitTypography.CardSubtitle.copy(
-                    fontSize = 15.sp, 
-                    color = CommitColors.InkSoft,
-                    fontFamily = CommitTypography.Serif,
-                ),
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center
-            )
-        }
+         Text(
+            text = "Stop saving. Start scheduling.",
+            style = CommitTypography.CardSubtitle.copy(
+                fontSize = 15.sp, 
+                color = CommitColors.InkSoft,
+                fontFamily = CommitTypography.Serif,
+            ),
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+        )
         
         Spacer(modifier = Modifier.height(56.dp))
         
         // Buttons
-        androidx.compose.animation.AnimatedVisibility(
-            visible = showButtons,
-            enter = androidx.compose.animation.fadeIn()
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+            MetroButton(
+                text = "Connect Google Calendar",
+                onClick = onConnectClick,
                 modifier = Modifier.fillMaxWidth()
-            ) {
-                MetroButton(
-                    text = "Connect Google Calendar",
-                    onClick = onConnectClick,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                
-                Text(
-                    text = "SKIP FOR NOW",
-                    style = CommitTypography.Label.copy(
-                        fontSize = 10.sp,
-                        letterSpacing = 0.1.em,
-                        color = CommitColors.InkSoft.copy(alpha = 0.6f)
-                    ),
-                    modifier = Modifier
-                        .clickable { /* TODO: Implement skip */ }
-                        .padding(12.dp)
-                )
-            }
+            )
+            
+            Text(
+                text = "SKIP FOR NOW",
+                style = CommitTypography.Label.copy(
+                    fontSize = 10.sp,
+                    letterSpacing = 0.1.em,
+                    color = CommitColors.InkSoft.copy(alpha = 0.6f)
+                ),
+                modifier = Modifier
+                    .clickable { /* TODO: Implement skip */ }
+                    .padding(12.dp)
+            )
         }
     }
 }

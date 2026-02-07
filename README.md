@@ -1,4 +1,7 @@
-# Commit
+<div align="center">
+  <img src="docs/icon.png" width="128" alt="Commit App Icon" />
+  <h1>Commit</h1>
+</div>
 
 > **Bookmarks are intentions. Commitments are actions.**
 

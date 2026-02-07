@@ -208,12 +208,7 @@ private fun ShareSheet(
                 )
             }
             
-            Spacer(modifier = Modifier.height(12.dp))
-            
-            // Visual Calendar Grid (Mocked Viz)
-            CalendarAvailabilityGrid()
 
-            Spacer(modifier = Modifier.height(28.dp))
 
             // Duration
             Text("DURATION", style = CommitTypography.Label)
@@ -387,51 +382,7 @@ private fun WarningBox() {
     }
 }
 
-@Composable
-private fun CalendarAvailabilityGrid() {
-    // 7 Columns, 4 Rows mock
-    // Visual only
-    val days = listOf("M", "T", "W", "T", "F", "S", "S")
-    val blocks = listOf(
-        listOf(true, false, true, true), // M
-        listOf(false, true, true, false), // T
-        listOf(true, true, false, true), // W
-        listOf(true, false, true, false), // T
-        listOf(false, true, false, false), // F
-        listOf(false, false, true, true), // S
-        listOf(true, true, false, false)  // S
-    )
-    
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .border(1.dp, CommitColors.Line)
-            .padding(16.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            days.forEachIndexed { index, day ->
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Text(day, style = CommitTypography.Label.copy(fontSize = 9.sp))
-                    val dayBlocks = blocks[index]
-                    dayBlocks.forEach { isBusy ->
-                        Box(
-                            modifier = Modifier
-                                .width(30.dp) // rough width dist
-                                .height(4.dp)
-                                .background(if (isBusy) CommitColors.InkSoft.copy(alpha = 0.4f) else CommitColors.Line.copy(alpha = 0.2f))
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
+
 
 @Composable
 fun NotConnectedOverlay(

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -344,11 +345,13 @@ fun MetroDateTimePicker(
         val deviceDate = getDeviceDate()
         val deviceTime = getDeviceTime()
         var errorMessage by remember { mutableStateOf<String?>(null) }
-
-        val timePickerState = rememberTimePickerState(
-            initialHour = selectedTime.hour,
-            initialMinute = selectedTime.minute
-        )
+        
+        // Manual State for Custom Picker
+        var selectedHour by remember { androidx.compose.runtime.mutableIntStateOf(selectedTime.hour) }
+        var selectedMinute by remember { androidx.compose.runtime.mutableIntStateOf(selectedTime.minute / 5 * 5) }
+        
+        val hourListState = androidx.compose.foundation.lazy.rememberLazyListState(initialFirstVisibleItemIndex = if (selectedHour > 2) selectedHour - 2 else 0)
+        val minuteListState = androidx.compose.foundation.lazy.rememberLazyListState(initialFirstVisibleItemIndex = if (selectedMinute / 5 > 2) (selectedMinute / 5) - 2 else 0)
 
         Dialog(
             onDismissRequest = { showTimePicker = false },
@@ -368,7 +371,7 @@ fun MetroDateTimePicker(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = "select start time",
+                        text = "set time",
                         style = MaterialTheme.typography.titleLarge,
                         color = DarkThemeColors.TextPrimary
                     )
@@ -382,38 +385,98 @@ fun MetroDateTimePicker(
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(24.dp))
 
-                    TimePicker(
-                        state = timePickerState,
-                        colors = TimePickerDefaults.colors(
-                            clockDialColor = DarkThemeColors.Border,
-                            clockDialSelectedContentColor = DarkThemeColors.Background,
-                            clockDialUnselectedContentColor = DarkThemeColors.TextPrimary,
-                            selectorColor = DarkThemeColors.TextPrimary,
-                            containerColor = DarkThemeColors.DialogBackground,
-                            periodSelectorBorderColor = DarkThemeColors.Border,
-                            periodSelectorSelectedContainerColor = DarkThemeColors.TextPrimary,
-                            periodSelectorSelectedContentColor = DarkThemeColors.Background,
-                            periodSelectorUnselectedContainerColor = DarkThemeColors.DialogBackground,
-                            periodSelectorUnselectedContentColor = DarkThemeColors.TextPrimary,
-                            timeSelectorSelectedContainerColor = DarkThemeColors.TextPrimary,
-                            timeSelectorSelectedContentColor = DarkThemeColors.Background,
-                            timeSelectorUnselectedContainerColor = DarkThemeColors.DialogBackground,
-                            timeSelectorUnselectedContentColor = DarkThemeColors.TextPrimary
-                        )
-                    )
+                    // Custom Time Picker
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(240.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Hours
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("HOUR", style = MaterialTheme.typography.labelSmall, color = DarkThemeColors.TextSecondary)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            androidx.compose.foundation.lazy.LazyColumn(
+                                state = hourListState,
+                                modifier = Modifier
+                                    .width(60.dp)
+                                    .fillMaxHeight()
+                                    .border(1.dp, DarkThemeColors.Border),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 8.dp)
+                            ) {
+                                items(24) { hour ->
+                                    val isSelected = hour == selectedHour
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .background(if (isSelected) DarkThemeColors.TextPrimary else Color.Transparent)
+                                            .clickable { selectedHour = hour }
+                                            .padding(vertical = 12.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = "%02d".format(hour),
+                                            style = MaterialTheme.typography.titleMedium,
+                                            color = if (isSelected) DarkThemeColors.Background else DarkThemeColors.TextPrimary
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Text(":", style = MaterialTheme.typography.displayMedium, color = DarkThemeColors.TextSecondary, modifier = Modifier.padding(top = 24.dp))
+                        Spacer(modifier = Modifier.width(16.dp))
+
+                        // Minutes
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("MIN", style = MaterialTheme.typography.labelSmall, color = DarkThemeColors.TextSecondary)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            androidx.compose.foundation.lazy.LazyColumn(
+                                state = minuteListState,
+                                modifier = Modifier
+                                    .width(60.dp)
+                                    .fillMaxHeight()
+                                    .border(1.dp, DarkThemeColors.Border),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 8.dp)
+                            ) {
+                                items(12) { i ->
+                                    val minute = i * 5
+                                    val isSelected = minute == selectedMinute
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .background(if (isSelected) DarkThemeColors.TextPrimary else Color.Transparent)
+                                            .clickable { selectedMinute = minute }
+                                            .padding(vertical = 12.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = "%02d".format(minute),
+                                            style = MaterialTheme.typography.titleMedium,
+                                            color = if (isSelected) DarkThemeColors.Background else DarkThemeColors.TextPrimary
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
 
                     if (errorMessage != null) {
                         Text(
                             text = errorMessage!!,
                             style = MaterialTheme.typography.bodyMedium,
                             color = DarkThemeColors.OverdueRed,
-                            modifier = Modifier.padding(top = 8.dp)
+                            modifier = Modifier.padding(top = 16.dp)
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(24.dp))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -438,7 +501,7 @@ fun MetroDateTimePicker(
                                 .weight(1f)
                                 .background(DarkThemeColors.TextPrimary)
                                 .clickable {
-                                    val newTime = LocalTime.of(timePickerState.hour, timePickerState.minute)
+                                    val newTime = LocalTime.of(selectedHour, selectedMinute)
                                     val freshDeviceDate = getDeviceDate()
                                     val freshDeviceTime = getDeviceTime()
 
