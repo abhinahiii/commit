@@ -23,7 +23,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -33,7 +32,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
@@ -54,7 +52,6 @@ import com.readlater.ui.components.MetroButton
 import com.readlater.ui.theme.CommitBorders
 import com.readlater.ui.theme.CommitColors
 import com.readlater.ui.theme.CommitTypography
-import com.readlater.ui.theme.premiumShadow
 import com.readlater.ui.theme.rememberNoiseTexture
 import java.time.Instant
 import java.time.LocalDate
@@ -530,74 +527,6 @@ private fun EventListItem(
                                                         )
                                         )
                                 }
-                        }
-                }
-        }
-}
-
-@Composable
-private fun BottomNav(modifier: Modifier = Modifier, onNewClick: () -> Unit) {
-        // Floating Pill
-        Box(
-                modifier =
-                        modifier.clip(RoundedCornerShape(50))
-                                .background(CommitColors.DarkCard.copy(alpha = 0.95f))
-                                .border(
-                                        CommitBorders.Hairline,
-                                        CommitColors.Surface.copy(alpha = 0.1f),
-                                        RoundedCornerShape(50)
-                                )
-                                .premiumShadow(RoundedCornerShape(50))
-                                .padding(horizontal = 24.dp, vertical = 12.dp)
-        ) {
-                Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(32.dp)
-                ) {
-                        // Menu Icon
-                        Text("☰", color = CommitColors.Surface.copy(alpha = 0.5f), fontSize = 20.sp)
-
-                        // New Button
-                        Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                modifier = Modifier.clickable { onNewClick() }
-                        ) {
-                                Box(
-                                        modifier =
-                                                Modifier.size(28.dp)
-                                                        .background(
-                                                                CommitColors.Surface,
-                                                                CircleShape
-                                                        ),
-                                        contentAlignment = Alignment.Center
-                                ) { Text("+", fontSize = 18.sp, color = CommitColors.Ink) }
-                                Text(
-                                        "New",
-                                        style =
-                                                CommitTypography.Brand.copy(
-                                                        color = CommitColors.Surface,
-                                                        fontSize = 18.sp
-                                                )
-                                )
-                        }
-
-                        // Notification Icon
-                        Box {
-                                Text(
-                                        "Bell",
-                                        color = CommitColors.Surface.copy(alpha = 0.5f),
-                                        fontSize = 12.sp
-                                ) // Simplify icon
-                                Box(
-                                        modifier =
-                                                Modifier.size(6.dp)
-                                                        .background(
-                                                                CommitColors.RedAccent,
-                                                                CircleShape
-                                                        )
-                                                        .align(Alignment.TopEnd)
-                                )
                         }
                 }
         }

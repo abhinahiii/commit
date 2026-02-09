@@ -1,9 +1,6 @@
 package com.readlater
 
-import android.Manifest
 import android.content.Intent
-import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -25,7 +22,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
 import com.readlater.data.AuthRepository
 import com.readlater.data.AuthState
 import com.readlater.data.CalendarRepository
@@ -35,12 +31,12 @@ import com.readlater.ui.screens.NotConnectedOverlay
 import com.readlater.ui.screens.ShareOverlayContent
 import com.readlater.ui.theme.ReadLaterTheme
 import com.readlater.util.UrlMetadataFetcher
-import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.util.Calendar
 import java.util.Locale
+import kotlinx.coroutines.launch
 
 class ShareActivity : ComponentActivity() {
 
@@ -49,25 +45,18 @@ class ShareActivity : ComponentActivity() {
     private lateinit var eventRepository: EventRepository
     private lateinit var themeRepository: ThemeRepository
 
-    private val notificationPermissionLauncher = registerForActivityResult(
-        androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
-    ) { }
-
     private fun getDeviceDate(): LocalDate {
         val calendar = Calendar.getInstance()
         return LocalDate.of(
-            calendar.get(Calendar.YEAR),
-            calendar.get(Calendar.MONTH) + 1,
-            calendar.get(Calendar.DAY_OF_MONTH)
+                calendar.get(Calendar.YEAR),
+                calendar.get(Calendar.MONTH) + 1,
+                calendar.get(Calendar.DAY_OF_MONTH)
         )
     }
 
     private fun getDeviceTime(): LocalTime {
         val calendar = Calendar.getInstance()
-        return LocalTime.of(
-            calendar.get(Calendar.HOUR_OF_DAY),
-            calendar.get(Calendar.MINUTE)
-        )
+        return LocalTime.of(calendar.get(Calendar.HOUR_OF_DAY), calendar.get(Calendar.MINUTE))
     }
 
     private fun getDefaultTime(): LocalTime {
@@ -83,13 +72,6 @@ class ShareActivity : ComponentActivity() {
         calendarRepository = CalendarRepository(applicationContext)
         eventRepository = EventRepository(applicationContext, calendarRepository)
         themeRepository = ThemeRepository(applicationContext)
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            val permission = Manifest.permission.POST_NOTIFICATIONS
-            if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
-                notificationPermissionLauncher.launch(permission)
-            }
-        }
 
         val sharedText = intent?.getStringExtra(Intent.EXTRA_TEXT) ?: ""
         val sharedUrl = UrlMetadataFetcher.extractUrl(sharedText) ?: sharedText
@@ -132,92 +114,100 @@ class ShareActivity : ComponentActivity() {
                 val isAuthenticated = authState is AuthState.Authenticated
 
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.5f))
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null
-                        ) {
-                            if (!isLoading) finish()
-                        },
-                    contentAlignment = Alignment.Center
+                        modifier =
+                                Modifier.fillMaxSize()
+                                        .background(Color.Black.copy(alpha = 0.5f))
+                                        .clickable(
+                                                interactionSource =
+                                                        remember { MutableInteractionSource() },
+                                                indication = null
+                                        ) { if (!isLoading) finish() },
+                        contentAlignment = Alignment.Center
                 ) {
                     Box(
-                        modifier = Modifier
-                            .padding(24.dp)
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null
-                            ) { /* Consume clicks */ }
+                            modifier =
+                                    Modifier.padding(24.dp).clickable(
+                                                    interactionSource =
+                                                            remember { MutableInteractionSource() },
+                                                    indication = null
+                                            ) { /* Consume clicks */}
                     ) {
                         if (isAuthenticated) {
                             ShareOverlayContent(
-                                title = title,
-                                onTitleChange = { title = it },
-                                url = sharedUrl,
-                                selectedDate = selectedDate,
-                                selectedTime = selectedTime,
-                                onDateTimeSelected = { date, time ->
-                                    selectedDate = date
-                                    selectedTime = time
-                                },
-                                selectedDuration = selectedDuration,
-                                onDurationSelected = { selectedDuration = it },
-                                isLoading = isLoading,
-                                isFetchingTitle = isFetchingTitle,
-                                onCancel = { finish() },
-                                onSave = {
-                                    scope.launch {
-                                        isLoading = true
-                                        val account = authRepository.getAccount()
-                                        if (account != null) {
-                                            val dateTime = LocalDateTime.of(selectedDate, selectedTime)
-                                            val result = calendarRepository.createEvent(
-                                                account = account,
-                                                title = title,
-                                                description = sharedUrl,
-                                                imageUrl = imageUrl,
-                                                startDateTime = dateTime,
-                                                durationMinutes = selectedDuration
-                                            )
-                                            result.onSuccess { eventId ->
-                                                // Save to local database
-                                                eventRepository.saveEvent(
-                                                    googleEventId = eventId,
-                                                    title = title,
-                                                    url = sharedUrl,
-                                                    imageUrl = imageUrl,
-                                                    scheduledDateTime = dateTime,
-                                                    durationMinutes = selectedDuration
-                                                )
-                                                Toast.makeText(
-                                                    this@ShareActivity,
-                                                    "event created",
-                                                    Toast.LENGTH_SHORT
-                                                ).show()
-                                                finish()
-                                            }.onFailure { error ->
-                                                Toast.makeText(
-                                                    this@ShareActivity,
-                                                    "failed: ${error.message}".lowercase(Locale.ROOT),
-                                                    Toast.LENGTH_LONG
-                                                ).show()
-                                                isLoading = false
+                                    title = title,
+                                    onTitleChange = { title = it },
+                                    url = sharedUrl,
+                                    selectedDate = selectedDate,
+                                    selectedTime = selectedTime,
+                                    onDateTimeSelected = { date, time ->
+                                        selectedDate = date
+                                        selectedTime = time
+                                    },
+                                    selectedDuration = selectedDuration,
+                                    onDurationSelected = { selectedDuration = it },
+                                    isLoading = isLoading,
+                                    isFetchingTitle = isFetchingTitle,
+                                    onCancel = { finish() },
+                                    onSave = {
+                                        scope.launch {
+                                            isLoading = true
+                                            val account = authRepository.getAccount()
+                                            if (account != null) {
+                                                val dateTime =
+                                                        LocalDateTime.of(selectedDate, selectedTime)
+                                                val result =
+                                                        calendarRepository.createEvent(
+                                                                account = account,
+                                                                title = title,
+                                                                description = sharedUrl,
+                                                                imageUrl = imageUrl,
+                                                                startDateTime = dateTime,
+                                                                durationMinutes = selectedDuration
+                                                        )
+                                                result
+                                                        .onSuccess { eventId ->
+                                                            // Save to local database
+                                                            eventRepository.saveEvent(
+                                                                    googleEventId = eventId,
+                                                                    title = title,
+                                                                    url = sharedUrl,
+                                                                    imageUrl = imageUrl,
+                                                                    scheduledDateTime = dateTime,
+                                                                    durationMinutes =
+                                                                            selectedDuration
+                                                            )
+                                                            Toast.makeText(
+                                                                            this@ShareActivity,
+                                                                            "event created",
+                                                                            Toast.LENGTH_SHORT
+                                                                    )
+                                                                    .show()
+                                                            finish()
+                                                        }
+                                                        .onFailure { error ->
+                                                            Toast.makeText(
+                                                                            this@ShareActivity,
+                                                                            "failed: ${error.message}".lowercase(
+                                                                                    Locale.ROOT
+                                                                            ),
+                                                                            Toast.LENGTH_LONG
+                                                                    )
+                                                                    .show()
+                                                            isLoading = false
+                                                        }
                                             }
                                         }
                                     }
-                                }
                             )
                         } else {
                             NotConnectedOverlay(
-                                onOpenApp = {
-                                    startActivity(
-                                        Intent(this@ShareActivity, MainActivity::class.java)
-                                    )
-                                    finish()
-                                },
-                                onCancel = { finish() }
+                                    onOpenApp = {
+                                        startActivity(
+                                                Intent(this@ShareActivity, MainActivity::class.java)
+                                        )
+                                        finish()
+                                    },
+                                    onCancel = { finish() }
                             )
                         }
                     }

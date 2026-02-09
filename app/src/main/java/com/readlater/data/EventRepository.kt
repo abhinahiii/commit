@@ -2,22 +2,17 @@ package com.readlater.data
 
 import android.content.Context
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount
-import com.readlater.notifications.NotificationScheduler
 import com.readlater.util.UrlMetadataFetcher
-import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlinx.coroutines.flow.Flow
 
-class EventRepository(
-    context: Context,
-    private val calendarRepository: CalendarRepository
-) {
+class EventRepository(context: Context, private val calendarRepository: CalendarRepository) {
     private val database = AppDatabase.getDatabase(context)
     private val dao = database.savedEventDao()
-    private val notificationScheduler = NotificationScheduler(context)
 
     // Get all scheduled (not completed) events - sorted with overdue first
     fun getUpcomingEvents(): Flow<List<SavedEvent>> {
@@ -39,7 +34,8 @@ class EventRepository(
         val currentTime = System.currentTimeMillis()
         val today = LocalDate.now()
         val startOfDay = today.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
-        val endOfDay = today.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val endOfDay =
+                today.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
 
         val eventsToday = dao.countEventsForToday(startOfDay, endOfDay)
         val overdueCount = dao.countOverdueEvents(currentTime)
@@ -50,9 +46,10 @@ class EventRepository(
                 "no events scheduled."
             }
             eventsToday == 0 && overdueCount == 0 && nextEvent != null -> {
-                val nextDate = java.time.Instant.ofEpochMilli(nextEvent.scheduledDateTime)
-                    .atZone(ZoneId.systemDefault())
-                    .toLocalDate()
+                val nextDate =
+                        java.time.Instant.ofEpochMilli(nextEvent.scheduledDateTime)
+                                .atZone(ZoneId.systemDefault())
+                                .toLocalDate()
                 val formatter = DateTimeFormatter.ofPattern("EEEE")
                 val dayName = nextDate.format(formatter).lowercase(Locale.ROOT)
                 "no events today. next scheduled on $dayName."
@@ -62,7 +59,8 @@ class EventRepository(
                 else "you have $eventsToday events today."
             }
             eventsToday > 0 && overdueCount > 0 -> {
-                val todayText = if (eventsToday == 1) "1 event today" else "$eventsToday events today"
+                val todayText =
+                        if (eventsToday == 1) "1 event today" else "$eventsToday events today"
                 val overdueText = if (overdueCount == 1) "1 overdue" else "$overdueCount overdue"
                 "you have $todayText and $overdueText."
             }
@@ -75,42 +73,34 @@ class EventRepository(
     }
 
     suspend fun saveEvent(
-        googleEventId: String,
-        title: String,
-        url: String,
-        scheduledDateTime: LocalDateTime,
-        durationMinutes: Int,
-        imageUrl: String? = null
+            googleEventId: String,
+            title: String,
+            url: String,
+            scheduledDateTime: LocalDateTime,
+            durationMinutes: Int,
+            imageUrl: String? = null
     ) {
-        val epochMillis = scheduledDateTime
-            .atZone(ZoneId.systemDefault())
-            .toInstant()
-            .toEpochMilli()
+        val epochMillis =
+                scheduledDateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
 
-        val event = SavedEvent(
-            googleEventId = googleEventId,
-            title = title,
-            url = url,
-            imageUrl = imageUrl,
-            scheduledDateTime = epochMillis,
-            durationMinutes = durationMinutes,
-            createdAt = System.currentTimeMillis(),
-            status = EventStatus.SCHEDULED
-        )
+        val event =
+                SavedEvent(
+                        googleEventId = googleEventId,
+                        title = title,
+                        url = url,
+                        imageUrl = imageUrl,
+                        scheduledDateTime = epochMillis,
+                        durationMinutes = durationMinutes,
+                        createdAt = System.currentTimeMillis(),
+                        status = EventStatus.SCHEDULED
+                )
         dao.insertEvent(event)
-        notificationScheduler.scheduleReminder(
-            eventId = googleEventId,
-            title = title,
-            url = url,
-            scheduledAtMillis = epochMillis
-        )
     }
 
     // Mark event as completed
     suspend fun markAsCompleted(eventId: String): Result<Unit> {
         return try {
             dao.markAsCompleted(eventId, System.currentTimeMillis())
-            notificationScheduler.cancelReminder(eventId)
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -121,15 +111,6 @@ class EventRepository(
     suspend fun undoComplete(eventId: String): Result<Unit> {
         return try {
             dao.undoComplete(eventId)
-            val event = dao.getEventById(eventId)
-            if (event != null && event.scheduledDateTime > System.currentTimeMillis()) {
-                notificationScheduler.scheduleReminder(
-                    eventId = event.googleEventId,
-                    title = event.title,
-                    url = event.url,
-                    scheduledAtMillis = event.scheduledDateTime
-                )
-            }
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -137,49 +118,47 @@ class EventRepository(
     }
 
     // Archive event (also deletes from Google Calendar)
-    suspend fun archiveEvent(
-        account: GoogleSignInAccount,
-        eventId: String
-    ): Result<Unit> {
+    suspend fun archiveEvent(account: GoogleSignInAccount, eventId: String): Result<Unit> {
         // Delete from Google Calendar
         val result = calendarRepository.deleteEvent(account, eventId)
 
         return result.map {
             // Mark as archived locally
             dao.markAsArchived(eventId, System.currentTimeMillis())
-            notificationScheduler.cancelReminder(eventId)
         }
     }
 
     // Restore from archive (creates new calendar event)
     suspend fun restoreFromArchive(
-        account: GoogleSignInAccount,
-        event: SavedEvent
+            account: GoogleSignInAccount,
+            event: SavedEvent
     ): Result<String> {
         // Create a new event in Google Calendar
-        val scheduledDateTime = java.time.Instant.ofEpochMilli(event.scheduledDateTime)
-            .atZone(ZoneId.systemDefault())
-            .toLocalDateTime()
+        val scheduledDateTime =
+                java.time.Instant.ofEpochMilli(event.scheduledDateTime)
+                        .atZone(ZoneId.systemDefault())
+                        .toLocalDateTime()
 
-        val result = calendarRepository.createEvent(
-            account = account,
-            title = event.title,
-            description = event.url,
-            imageUrl = event.imageUrl,
-            startDateTime = scheduledDateTime,
-            durationMinutes = event.durationMinutes
-        )
+        val result =
+                calendarRepository.createEvent(
+                        account = account,
+                        title = event.title,
+                        description = event.url,
+                        imageUrl = event.imageUrl,
+                        startDateTime = scheduledDateTime,
+                        durationMinutes = event.durationMinutes
+                )
 
         return result.map { newEventId ->
             // Update the event with new Google Event ID and restore status
             dao.deleteEvent(event.googleEventId)
             saveEvent(
-                googleEventId = newEventId,
-                title = event.title,
-                url = event.url,
-                scheduledDateTime = scheduledDateTime,
-                durationMinutes = event.durationMinutes,
-                imageUrl = event.imageUrl
+                    googleEventId = newEventId,
+                    title = event.title,
+                    url = event.url,
+                    scheduledDateTime = scheduledDateTime,
+                    durationMinutes = event.durationMinutes,
+                    imageUrl = event.imageUrl
             )
             newEventId
         }
@@ -189,7 +168,6 @@ class EventRepository(
     suspend fun deleteEventPermanently(eventId: String): Result<Unit> {
         return try {
             dao.deleteEvent(eventId)
-            notificationScheduler.cancelReminder(eventId)
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -198,59 +176,48 @@ class EventRepository(
 
     // Reschedule event
     suspend fun rescheduleEvent(
-        account: GoogleSignInAccount,
-        eventId: String,
-        newDateTime: LocalDateTime,
-        durationMinutes: Int
+            account: GoogleSignInAccount,
+            eventId: String,
+            newDateTime: LocalDateTime,
+            durationMinutes: Int
     ): Result<Unit> {
         // Update in Google Calendar
         val result = calendarRepository.updateEvent(account, eventId, newDateTime, durationMinutes)
 
         return result.map {
             // Update locally
-            val epochMillis = newDateTime
-                .atZone(ZoneId.systemDefault())
-                .toInstant()
-                .toEpochMilli()
+            val epochMillis = newDateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
             dao.updateEventDateTime(eventId, epochMillis)
-            val updated = dao.getEventById(eventId)
-            if (updated != null) {
-                notificationScheduler.scheduleReminder(
-                    eventId = updated.googleEventId,
-                    title = updated.title,
-                    url = updated.url,
-                    scheduledAtMillis = epochMillis
-                )
-            }
         }
     }
 
     // Schedule again (from completed)
     suspend fun scheduleAgain(
-        account: GoogleSignInAccount,
-        originalEvent: SavedEvent,
-        newDateTime: LocalDateTime,
-        durationMinutes: Int
+            account: GoogleSignInAccount,
+            originalEvent: SavedEvent,
+            newDateTime: LocalDateTime,
+            durationMinutes: Int
     ): Result<String> {
         // Create a new event in Google Calendar
-        val result = calendarRepository.createEvent(
-            account = account,
-            title = originalEvent.title,
-            description = originalEvent.url,
-            imageUrl = originalEvent.imageUrl,
-            startDateTime = newDateTime,
-            durationMinutes = durationMinutes
-        )
+        val result =
+                calendarRepository.createEvent(
+                        account = account,
+                        title = originalEvent.title,
+                        description = originalEvent.url,
+                        imageUrl = originalEvent.imageUrl,
+                        startDateTime = newDateTime,
+                        durationMinutes = durationMinutes
+                )
 
         return result.map { newEventId ->
             // Save the new event locally
             saveEvent(
-                googleEventId = newEventId,
-                title = originalEvent.title,
-                url = originalEvent.url,
-                scheduledDateTime = newDateTime,
-                durationMinutes = durationMinutes,
-                imageUrl = originalEvent.imageUrl
+                    googleEventId = newEventId,
+                    title = originalEvent.title,
+                    url = originalEvent.url,
+                    scheduledDateTime = newDateTime,
+                    durationMinutes = durationMinutes,
+                    imageUrl = originalEvent.imageUrl
             )
             newEventId
         }
@@ -271,7 +238,6 @@ class EventRepository(
                 if (calendarEvent == null) {
                     // Event was deleted from Google Calendar
                     dao.updateEventStatus(event.googleEventId, EventStatus.DELETED_FROM_CALENDAR)
-                    notificationScheduler.cancelReminder(event.googleEventId)
                 }
             }
         }
